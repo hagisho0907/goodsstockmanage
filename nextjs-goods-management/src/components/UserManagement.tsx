@@ -182,21 +182,26 @@ export function UserManagement({ onNavigate }: UserManagementProps) {
   };
 
   const handleStorageLocationToggle = (locationId: string, isEdit = false) => {
-    const target = isEdit ? editUser : newUser;
-    const setter = isEdit ? setEditUser : setNewUser;
-    
-    if (!target) return;
+    if (isEdit) {
+      setEditUser(prev => {
+        if (!prev) return prev;
 
-    const currentAccess = target.storageLocationAccess || [];
-    const newAccess = currentAccess.includes(locationId)
-      ? currentAccess.filter(id => id !== locationId)
-      : [...currentAccess, locationId];
+        const currentAccess = prev.storageLocationAccess || [];
+        const newAccess = currentAccess.includes(locationId)
+          ? currentAccess.filter(id => id !== locationId)
+          : [...currentAccess, locationId];
 
-    if (isEdit && editUser) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setter({ ...editUser, storageLocationAccess: newAccess } as any);
+        return { ...prev, storageLocationAccess: newAccess };
+      });
     } else {
-      setter(prev => ({ ...prev, storageLocationAccess: newAccess }));
+      setNewUser(prev => {
+        const currentAccess = prev.storageLocationAccess || [];
+        const newAccess = currentAccess.includes(locationId)
+          ? currentAccess.filter(id => id !== locationId)
+          : [...currentAccess, locationId];
+
+        return { ...prev, storageLocationAccess: newAccess };
+      });
     }
   };
 
