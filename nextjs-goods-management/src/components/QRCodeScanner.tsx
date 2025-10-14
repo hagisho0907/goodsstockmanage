@@ -339,24 +339,24 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
                           <span className="ml-2 font-medium">{foundProduct.name}</span>
                         </div>
                         <div>
-                          <span className="text-gray-600">JAN:</span>
-                          <span className="ml-2 font-mono">{foundProduct.janCode}</span>
+                          <span className="text-gray-600">SKU:</span>
+                          <span className="ml-2 font-mono">{foundProduct.sku}</span>
                         </div>
                         <div>
                           <span className="text-gray-600">カテゴリ:</span>
-                          <span className="ml-2">{foundProduct.category}</span>
+                          <span className="ml-2">{foundProduct.categoryName}</span>
                         </div>
                         <div>
                           <span className="text-gray-600">保管場所:</span>
-                          <span className="ml-2">{foundProduct.storageLocation}</span>
+                          <span className="ml-2">{foundProduct.storageLocationName}</span>
                         </div>
                         <div>
                           <span className="text-gray-600">在庫数:</span>
-                          <span className="ml-2">{foundProduct.totalStock}</span>
+                          <span className="ml-2">{foundProduct.currentStock}</span>
                         </div>
                         <div>
                           <span className="text-gray-600">単価:</span>
-                          <span className="ml-2">¥{foundProduct.unitPrice.toLocaleString()}</span>
+                          <span className="ml-2">価格情報なし</span>
                         </div>
                       </div>
                       <div className="flex gap-2 mt-3">
@@ -408,7 +408,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
                             {item.product?.name || 'Unknown Product'}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {item.product?.janCode || 'No JAN'}
+                            {item.product?.sku || 'No SKU'}
                           </p>
                         </div>
                       </div>
