@@ -9,6 +9,13 @@ import { Switch } from './ui/switch';
 import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { toast } from 'sonner';
 import { 
   Camera, 
@@ -20,7 +27,8 @@ import {
   AlertCircle,
   CheckCircle,
   Upload,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Loader2,
 } from 'lucide-react';
 import { dataStore } from '../lib/dataStore';
 import { Product } from '../types';
@@ -55,6 +63,10 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     product?: Product;
   }>>([]);
   const [hasCamera, setHasCamera] = useState(false);
+  const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [isRequestingCamera, setIsRequestingCamera] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -63,115 +75,240 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isScanningRef = useRef(false);
 
-  // カメラの利用可能性をチェック
-  useEffect(() => {
-    const checkCamera = async () => {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        setHasCamera(videoDevices.length > 0);
-      } catch (error) {
-        console.error('Camera check failed:', error);
-        setHasCamera(false);
-      }
-    };
-
-    if (navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function') {
-      checkCamera();
-    }
-  }, []);
-
-  // コンポーネントアンマウント時のクリーンアップ
-  useEffect(() => {
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (scanIntervalRef.current) {
-        clearInterval(scanIntervalRef.current);
-      }
-    };
-  }, []);
-
-  const startCamera = async () => {
-    try {
-      // iOSでのカメラアクセス改善のための設定
-      const constraints = {
-        video: {
-          facingMode: { ideal: 'environment' }, // idealを使用してfallbackを許可
-          width: { min: 320, ideal: 640, max: 1920 },
-          height: { min: 240, ideal: 480, max: 1080 }
-        },
-        audio: false // 明示的にオーディオを無効化
-      };
-
-      // iOS Safari対応：getUserMediaの前にデバイスをチェック
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('カメラAPIがサポートされていません');
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        
-        // iOS対応：videoの自動再生を確実にする
-        videoRef.current.playsInline = true;
-        videoRef.current.muted = true;
-        videoRef.current.autoplay = true;
-        
-        // loadedmetadataイベントを待ってからスキャン開始
-        videoRef.current.onloadedmetadata = () => {
-          if (videoRef.current) {
-            videoRef.current.play().then(() => {
-              setIsScanning(true);
-              startQRScan(); // QRコードスキャン開始
-              toast.success('カメラを起動しました');
-            }).catch(() => {
-              toast.error('カメラの再生に失敗しました');
-            });
-          }
-        };
-      }
-    } catch (error) {
-      console.error('Camera access failed:', error);
-      
-      // エラーの詳細に応じたメッセージ
-      let errorMessage = 'カメラへのアクセスに失敗しました';
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError') {
-          errorMessage = 'カメラの使用許可が必要です。ブラウザの設定を確認してください';
-        } else if (error.name === 'NotFoundError') {
-          errorMessage = 'カメラが見つかりません';
-        } else if (error.name === 'NotReadableError') {
-          errorMessage = 'カメラが他のアプリで使用中です';
-        } else if (error.name === 'NotSupportedError') {
-          errorMessage = 'HTTPS環境が必要です';
-        }
-      }
-      
-      toast.error(errorMessage);
-    }
-  };
-
-  const stopCamera = () => {
+  const stopCamera = useCallback((options?: { silent?: boolean }) => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    // QRスキャン停止
     if (scanIntervalRef.current) {
       clearInterval(scanIntervalRef.current);
       scanIntervalRef.current = null;
     }
     setIsScanning(false);
-    toast.info('カメラを停止しました');
-  };
+    isScanningRef.current = false;
+    setIsRequestingCamera(false);
+    if (!options?.silent) {
+      toast.info('カメラを停止しました');
+    }
+  }, []);
+
+  const updateCameraDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      setHasCamera(false);
+      setCameraDevices([]);
+      return;
+    }
+
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((device) => device.kind === 'videoinput');
+      const usableDevices = videoInputs.filter((device) => Boolean(device.deviceId));
+
+      setCameraDevices(usableDevices);
+      setHasCamera(videoInputs.length > 0);
+
+      if (!selectedCameraId) {
+        const preferredDevice =
+          usableDevices.find(
+            (device) =>
+              device.label &&
+              /back|environment|rear/i.test(device.label.toLowerCase()),
+          ) ?? usableDevices[0];
+
+        if (preferredDevice?.deviceId) {
+          setSelectedCameraId(preferredDevice.deviceId);
+        }
+      }
+    } catch (error) {
+      console.error('Camera enumeration failed:', error);
+      setHasCamera(false);
+      setCameraDevices([]);
+    }
+  }, [selectedCameraId]);
+
+  // カメラの利用可能性をチェック
+  useEffect(() => {
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function') {
+      updateCameraDevices();
+    } else {
+      setHasCamera(false);
+    }
+  }, [updateCameraDevices]);
+
+  useEffect(() => {
+    if (!navigator.mediaDevices?.addEventListener) return;
+
+    const handleDeviceChange = () => {
+      updateCameraDevices();
+    };
+
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+    };
+  }, [updateCameraDevices]);
+
+  // コンポーネントアンマウント時のクリーンアップ
+  useEffect(() => {
+    return () => {
+      stopCamera({ silent: true });
+    };
+  }, [stopCamera]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        stopCamera({ silent: true });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [stopCamera]);
+
+  const startCamera = useCallback(
+    async (targetDeviceId?: string) => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error('カメラAPIがサポートされていません');
+        return;
+      }
+
+      try {
+        stopCamera({ silent: true });
+        setIsRequestingCamera(true);
+
+        const selectedId = targetDeviceId ?? selectedCameraId;
+        const videoConstraints: MediaTrackConstraints = selectedId
+          ? { deviceId: { exact: selectedId } }
+          : {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+            };
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints,
+          audio: false,
+        });
+
+        await updateCameraDevices();
+
+        const videoElement = videoRef.current;
+        if (!videoElement) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        const [track] = stream.getVideoTracks();
+        const settings = track.getSettings();
+        if (!selectedId && settings.deviceId) {
+          setSelectedCameraId(settings.deviceId);
+        }
+
+        videoElement.srcObject = stream;
+        streamRef.current = stream;
+
+        // iOS向け属性セット
+        videoElement.setAttribute('playsinline', 'true');
+        videoElement.setAttribute('autoplay', 'true');
+        videoElement.setAttribute('muted', 'true');
+        videoElement.playsInline = true;
+        videoElement.autoplay = true;
+        videoElement.muted = true;
+
+        try {
+          await videoElement.play();
+          setIsScanning(true);
+          isScanningRef.current = true;
+          setPermissionStatus('granted');
+          startQRScan();
+          toast.success('カメラを起動しました');
+        } catch (playError) {
+          console.error('Video playback failed:', playError);
+          toast.error('カメラの再生がブロックされました。画面をタップしてから再試行してください。');
+        }
+      } catch (error) {
+        console.error('Camera access failed:', error);
+        setIsScanning(false);
+        isScanningRef.current = false;
+
+        let errorMessage = 'カメラへのアクセスに失敗しました';
+        if (error instanceof Error) {
+          if (error.name === 'NotAllowedError') {
+            errorMessage = 'カメラの使用許可が必要です。ブラウザの設定を確認してください';
+            setPermissionStatus('denied');
+          } else if (error.name === 'NotFoundError') {
+            errorMessage = 'カメラが見つかりません';
+          } else if (error.name === 'NotReadableError') {
+            errorMessage = 'カメラが他のアプリで使用中です';
+          } else if (error.name === 'NotSupportedError') {
+            errorMessage = 'HTTPS環境が必要です';
+          }
+        }
+
+        toast.error(errorMessage);
+      } finally {
+        setIsRequestingCamera(false);
+      }
+    },
+    [selectedCameraId, stopCamera, updateCameraDevices],
+  );
+
+  const handleSelectCamera = useCallback(
+    async (deviceId: string) => {
+      setSelectedCameraId(deviceId);
+
+      if (isRequestingCamera) {
+        return;
+      }
+
+      if (isScanningRef.current) {
+        await startCamera(deviceId);
+      }
+    },
+    [isRequestingCamera, startCamera],
+  );
+
+  const handleCycleCamera = useCallback(async () => {
+    if (cameraDevices.length <= 1) {
+      toast.info('切り替え可能なカメラが見つかりません');
+      return;
+    }
+
+    const currentIndex = cameraDevices.findIndex(
+      (device) => device.deviceId === selectedCameraId,
+    );
+    const nextDevice = cameraDevices[(currentIndex + 1) % cameraDevices.length];
+
+    if (nextDevice?.deviceId) {
+      await handleSelectCamera(nextDevice.deviceId);
+    } else {
+      await startCamera();
+    }
+  }, [cameraDevices, handleSelectCamera, selectedCameraId, startCamera]);
+
+  const handleCameraChange = useCallback(
+    async (value: string) => {
+      if (value === 'auto') {
+        setSelectedCameraId('');
+        if (isScanningRef.current && !isRequestingCamera) {
+          await startCamera();
+        }
+        return;
+      }
+
+      await handleSelectCamera(value);
+    },
+    [handleSelectCamera, isRequestingCamera, startCamera],
+  );
 
   // リアルタイムQRコードスキャン機能
   const startQRScan = () => {
@@ -180,7 +317,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     }
 
     scanIntervalRef.current = setInterval(() => {
-      if (videoRef.current && canvasRef.current && isScanning) {
+      if (videoRef.current && canvasRef.current && isScanningRef.current) {
         const video = videoRef.current;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
@@ -232,7 +369,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         toast.success(`商品を検出: ${product.name}`);
 
         if (!continuousMode) {
-          stopCamera();
+          stopCamera({ silent: true });
         }
 
         // モードに応じた処理
@@ -263,7 +400,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     } catch (error) {
       toast.error('QRコードの読み取りに失敗しました');
     }
-  }, [continuousMode, mode, onNavigate, onProductDetected]);
+  }, [continuousMode, mode, onNavigate, onProductDetected, stopCamera]);
 
   // 画像ファイルからQRコードを読み取る
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -387,9 +524,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         <TabsContent value="scanner" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle>カメラスキャン</CardTitle>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center justify-end gap-3">
                   <div className="flex items-center gap-2">
                     <Switch
                       id="continuous"
@@ -398,12 +535,47 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                     />
                     <Label htmlFor="continuous">連続スキャン</Label>
                   </div>
+                  {hasCamera && cameraDevices.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={selectedCameraId || 'auto'}
+                        onValueChange={handleCameraChange}
+                        disabled={isRequestingCamera}
+                      >
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="カメラ選択" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">自動選択</SelectItem>
+                          {cameraDevices.map((device, index) => (
+                            <SelectItem key={device.deviceId} value={device.deviceId}>
+                              {device.label || `カメラ${index + 1}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCycleCamera}
+                        disabled={isRequestingCamera}
+                      >
+                        カメラ切替
+                      </Button>
+                    </div>
+                  )}
                   {hasCamera ? (
                     <Button
-                      onClick={isScanning ? stopCamera : startCamera}
+                      onClick={() => (isScanning ? stopCamera() : startCamera())}
                       variant={isScanning ? 'destructive' : 'default'}
+                      disabled={isRequestingCamera}
                     >
-                      {isScanning ? (
+                      {isRequestingCamera ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          準備中...
+                        </>
+                      ) : isScanning ? (
                         <>
                           <CameraOff className="w-4 h-4 mr-2" />
                           スキャン停止
@@ -427,6 +599,14 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
+              {permissionStatus === 'denied' && (
+                <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-sm leading-relaxed">
+                    カメラの使用がブラウザによってブロックされています。ブラウザの設定からこのサイトへのカメラアクセスを許可し、ページを再読み込みしてください。
+                  </AlertDescription>
+                </Alert>
+              )}
               {isScanning ? (
                 <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
                   <video
