@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import jsQR from 'jsqr';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -52,6 +53,7 @@ interface ScanResult {
 }
 
 export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }: QRCodeScannerProps) {
+  const [isClient, setIsClient] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [foundProduct, setFoundProduct] = useState<Product | null>(null);
@@ -61,7 +63,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     data: ScanResult;
     product?: Product;
   }>>([]);
-  const [hasCamera, setHasCamera] = useState(true); // デフォルトをtrueに変更してHydrationエラーを回避
+  const [hasCamera, setHasCamera] = useState(false);
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [isRequestingCamera, setIsRequestingCamera] = useState(false);
@@ -75,6 +77,11 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isScanningRef = useRef(false);
+
+  // クライアントサイドのみでレンダリングするためのフラグ
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const stopCamera = useCallback((options?: { silent?: boolean }) => {
     if (streamRef.current) {
@@ -228,7 +235,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   // カメラの利用可能性をチェック
   useEffect(() => {
     // クライアントサイドでのみ実行
-    if (typeof window === 'undefined') return;
+    if (!isClient || typeof window === 'undefined') return;
 
     // HTTPSチェック
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
@@ -242,11 +249,11 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       setHasCamera(false);
       console.error('navigator.mediaDevices APIが利用できません');
     }
-  }, [updateCameraDevices]);
+  }, [isClient, updateCameraDevices]);
 
   useEffect(() => {
     // クライアントサイドでのみ実行
-    if (typeof window === 'undefined') return;
+    if (!isClient || typeof window === 'undefined') return;
     if (!navigator.mediaDevices?.addEventListener) return;
 
     const handleDeviceChange = () => {
@@ -258,7 +265,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
     };
-  }, [updateCameraDevices]);
+  }, [isClient, updateCameraDevices]);
 
   // コンポーネントアンマウント時のクリーンアップ
   useEffect(() => {
@@ -269,7 +276,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
   useEffect(() => {
     // クライアントサイドでのみ実行
-    if (typeof window === 'undefined') return;
+    if (!isClient || typeof window === 'undefined') return;
     
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
@@ -544,6 +551,31 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   };
 
   const modeInfo = getModeInfo();
+
+  // クライアントサイドでのみレンダリング
+  if (!isClient) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            {modeInfo.icon}
+            {modeInfo.title}
+          </h1>
+          <p className="text-muted-foreground mt-1">{modeInfo.description}</p>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg">
+              <div className="animate-pulse">
+                <QrCode className="w-16 h-16 text-gray-400 mb-4" />
+                <p className="text-gray-500">読み込み中...</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
