@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -33,32 +35,15 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // TODO: 実際のAPI呼び出しに置き換える
-      // 仮の認証処理
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // デモ用の認証
-      if (email === 'admin@example.com' && password === 'password123') {
-        // セッション情報を保存（実際はJWTトークンなどを使用）
-        localStorage.setItem('authToken', 'demo-token');
-        localStorage.setItem('userEmail', email);
-        if (rememberMe) {
-          localStorage.setItem('rememberMe', 'true');
-        }
-        
+      const isAuthenticated = await login(email, password, rememberMe);
+
+      if (isAuthenticated) {
         toast.success('ログインしました');
-        // デバッグ用ログ
-        console.log('Login successful, redirecting...');
-        console.log('Auth token set:', localStorage.getItem('authToken'));
-        
-        // 強制リダイレクト
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1000);
+        router.push('/');
       } else {
         toast.error('メールアドレスまたはパスワードが正しくありません');
       }
-    } catch (error) {
+    } catch {
       toast.error('ログインに失敗しました');
     } finally {
       setIsLoading(false);

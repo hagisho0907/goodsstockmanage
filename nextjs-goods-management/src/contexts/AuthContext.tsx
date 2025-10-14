@@ -13,7 +13,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, remember?: boolean) => Promise<boolean>;
   logout: () => void;
   checkAuth: () => void;
 }
@@ -55,7 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (
+    email: string,
+    password: string,
+    remember = false,
+  ): Promise<boolean> => {
     // TODO: 実際のAPI呼び出しに置き換える
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -70,6 +74,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         localStorage.setItem('authToken', 'demo-token');
         localStorage.setItem('userEmail', email);
+        if (remember) {
+          localStorage.setItem('rememberMe', 'true');
+        } else {
+          localStorage.removeItem('rememberMe');
+        }
         setUser(userData);
         return true;
       }
