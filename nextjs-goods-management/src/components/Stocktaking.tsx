@@ -126,17 +126,21 @@ export function Stocktaking({ onNavigate }: StocktakingProps) {
     const updatedItems = selectedStocktaking.items.map(item => {
       if (item.id === itemId) {
         const newActualStock = {
+          new: 0,
+          used: 0,
+          damaged: 0,
+          total: 0,
           ...item.actualStock,
           [field]: value,
         };
         
-        const total = newActualStock.new + newActualStock.used + newActualStock.damaged;
+        const total = (newActualStock.new || 0) + (newActualStock.used || 0) + (newActualStock.damaged || 0);
         newActualStock.total = total;
 
         const difference = {
-          new: newActualStock.new - item.theoreticalStock.new,
-          used: newActualStock.used - item.theoreticalStock.used,
-          damaged: newActualStock.damaged - item.theoreticalStock.damaged,
+          new: (newActualStock.new || 0) - item.theoreticalStock.new,
+          used: (newActualStock.used || 0) - item.theoreticalStock.used,
+          damaged: (newActualStock.damaged || 0) - item.theoreticalStock.damaged,
           total: total - item.theoreticalStock.total,
         };
 
