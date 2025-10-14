@@ -193,7 +193,7 @@ export function UserManagement({ onNavigate }: UserManagementProps) {
       : [...currentAccess, locationId];
 
     if (isEdit && editUser) {
-      setter({ ...editUser, storageLocationAccess: newAccess });
+      setter({ ...editUser, storageLocationAccess: newAccess } as any);
     } else {
       setter(prev => ({ ...prev, storageLocationAccess: newAccess }));
     }
