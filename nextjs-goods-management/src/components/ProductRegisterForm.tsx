@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Upload, X, Save, ChevronsUpDown } from 'lucide-react';
+import QRCode from 'qrcode';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -112,6 +113,32 @@ export function ProductRegisterForm({ onNavigate }: ProductRegisterFormProps) {
     }));
   };
 
+  const generateProductQRCode = async (product: Product): Promise<string | undefined> => {
+    try {
+      const qrData = JSON.stringify({
+        id: product.id,
+        sku: product.sku,
+        name: product.name,
+        type: 'product',
+        timestamp: new Date().toISOString()
+      });
+      
+      const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+      
+      return qrCodeDataURL;
+    } catch (error) {
+      console.error('QR code generation error:', error);
+      return undefined;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -158,6 +185,14 @@ export function ProductRegisterForm({ onNavigate }: ProductRegisterFormProps) {
         createdBy: 'admin@example.com',
         createdAt: new Date().toISOString()
       };
+
+      // QRコード自動生成がONの場合はQRコードを生成
+      if (formData.generateQr) {
+        const qrCode = await generateProductQRCode(newProduct);
+        if (qrCode) {
+          newProduct.qrCode = qrCode;
+        }
+      }
 
       // データストアに追加
       dataStore.addProduct(newProduct);

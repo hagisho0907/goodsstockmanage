@@ -13,7 +13,7 @@ import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
 import { toast } from 'sonner';
 import { QrCode, Download, Printer, RefreshCw, Copy } from 'lucide-react';
-import { products } from '../lib/mockData';
+import { dataStore } from '../lib/dataStore';
 import { Product } from '../types';
 
 interface QRCodeGeneratorProps {
@@ -22,6 +22,7 @@ interface QRCodeGeneratorProps {
 }
 
 export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps) {
+  const products = dataStore.getProducts();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(
     productId ? products.find(p => p.id === productId) || null : null
   );
@@ -38,7 +39,7 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
   const [customText, setCustomText] = useState('');
   const [qrSize, setQrSize] = useState('256');
 
-  const generateQRData = () => {
+  const generateQRData = async () => {
     if (!selectedProduct) {
       toast.error('物品を選択してください');
       return;
@@ -63,7 +64,33 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
 
     const jsonData = JSON.stringify(data);
     setQrCodeData(jsonData);
-    toast.success('QRコードを生成しました');
+
+    try {
+      // QRコードのDataURLを生成して商品データに保存
+      const qrCodeDataURL = await QRCode.toDataURL(jsonData, {
+        width: parseInt(qrSize),
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+
+      // 商品データを更新してQRコードを保存
+      const updatedProduct = {
+        ...selectedProduct,
+        qrCode: qrCodeDataURL,
+        updatedBy: 'admin@example.com',
+        updatedAt: new Date().toISOString()
+      };
+
+      dataStore.updateProduct(selectedProduct.id, updatedProduct);
+      
+      toast.success('QRコードを生成し、商品データに保存しました');
+    } catch (error) {
+      console.error('QR code generation error:', error);
+      toast.success('QRコードを生成しました（データ保存にエラーが発生）');
+    }
   };
 
   const downloadQRCode = async () => {
@@ -187,7 +214,8 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
               <Select
                 value={selectedProduct?.id || ''}
                 onValueChange={(value) => {
-                  const product = products.find(p => p.id === value);
+                  const updatedProducts = dataStore.getProducts();
+                  const product = updatedProducts.find(p => p.id === value);
                   setSelectedProduct(product || null);
                 }}
               >
@@ -195,7 +223,7 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
                   <SelectValue placeholder="物品を選択してください" />
                 </SelectTrigger>
                 <SelectContent>
-                  {products.map(product => (
+                  {dataStore.getProducts().map(product => (
                     <SelectItem key={product.id} value={product.id}>
                       <div className="flex flex-col">
                         <span>{product.name}</span>
