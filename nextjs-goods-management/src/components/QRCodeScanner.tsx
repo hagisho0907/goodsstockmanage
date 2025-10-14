@@ -417,7 +417,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
                           {item.timestamp.toLocaleTimeString('ja-JP')}
                         </p>
                         <Badge variant="outline" className="mt-1">
-                          {item.product?.category || 'Unknown'}
+                          {item.product?.categoryName || 'Unknown'}
                         </Badge>
                       </div>
                     </div>
