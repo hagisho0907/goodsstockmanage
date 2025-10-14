@@ -4,8 +4,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Separator } from './ui/separator';
-import { products, stockMovements, productNotes } from '../lib/mockData';
-import { QRCodeGenerator } from './QRCodeGenerator';
+import { dataStore } from '../lib/dataStore';
 
 interface ProductDetailProps {
   productId?: string;
@@ -14,6 +13,7 @@ interface ProductDetailProps {
 
 export function ProductDetail({ productId, onNavigate }: ProductDetailProps) {
   const [showQRCode, setShowQRCode] = useState(false);
+  const products = dataStore.getProducts();
   const product = products.find(p => p.id === productId);
 
   if (!product) {
@@ -31,6 +31,8 @@ export function ProductDetail({ productId, onNavigate }: ProductDetailProps) {
     );
   }
 
+  const stockMovements = dataStore.getStockMovements();
+  const productNotes = dataStore.getProductNotes();
   const productMovements = stockMovements.filter(m => m.productId === product.id);
   const notes = productNotes.filter(n => n.productId === product.id).sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -323,8 +325,16 @@ export function ProductDetail({ productId, onNavigate }: ProductDetailProps) {
               <CardTitle>QRコード</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                <QrCode className="h-32 w-32 text-gray-400" />
+              <div className="aspect-square bg-gray-100 rounded-lg flex items-center justify-center p-4">
+                {product.qrCode ? (
+                  <img
+                    src={product.qrCode}
+                    alt={`${product.name} QRコード`}
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <QrCode className="h-32 w-32 text-gray-400" />
+                )}
               </div>
               <Button variant="outline" className="w-full mt-4">
                 印刷

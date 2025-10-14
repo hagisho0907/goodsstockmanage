@@ -18,7 +18,7 @@ import {
   PopoverTrigger,
 } from './ui/popover';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { categories, storageLocations, products, licensors, licensees, manufacturers } from '../lib/mockData';
+import { categories, storageLocations, licensors, licensees, manufacturers, dataStore } from '../lib/dataStore';
 import { cn } from './ui/utils';
 
 interface ProductEditFormProps {
@@ -29,6 +29,7 @@ interface ProductEditFormProps {
 const availableRegions = ['日本', '中国', '韓国', 'アメリカ', 'フランス'];
 
 export function ProductEditForm({ onNavigate, productId }: ProductEditFormProps) {
+  const products = dataStore.getProducts();
   const product = products.find(p => p.id === productId);
 
   const [name, setName] = useState('');
@@ -125,7 +126,53 @@ export function ProductEditForm({ onNavigate, productId }: ProductEditFormProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
+    
+    if (!product || !name.trim() || !sku.trim() || !category || !location) {
+      alert('必須項目を入力してください');
+      return;
+    }
+
+    const category_obj = categories.find(c => c.id === category);
+    const location_obj = storageLocations.find(l => l.id === location);
+    const licensor_obj = licensors.find(l => l.id === licensor);
+    const licensee_obj = licensees.find(l => l.id === licensee);
+    const manufacturer_obj = manufacturers.find(m => m.id === manufacturer);
+
+    const updatedProduct = {
+      ...product,
+      name: name.trim(),
+      sku: sku.trim(),
+      description: description.trim() || undefined,
+      categoryId: category,
+      categoryName: category_obj?.name || '',
+      currentStock: stockNew + stockUsed + stockDamaged,
+      storageLocationId: location,
+      storageLocationName: location_obj?.name || '',
+      stockBreakdown: {
+        new: stockNew,
+        used: stockUsed,
+        damaged: stockDamaged
+      },
+      usedStockImages: usedStockImages.length > 0 ? usedStockImages : undefined,
+      damagedStockImages: damagedStockImages.length > 0 ? damagedStockImages : undefined,
+      imageUrl: selectedImages.length > 0 ? selectedImages[0] : undefined,
+      ipInfo: {
+        productionQuantity: productionQty ? parseInt(productionQty) : undefined,
+        salesRegions: salesRegions.length > 0 ? salesRegions : undefined,
+        salesStartDate: salesStart || undefined,
+        salesEndDate: salesEnd || undefined,
+        licensorId: licensor || undefined,
+        licensorName: licensor_obj?.name,
+        licenseeId: licensee || undefined,
+        licenseeName: licensee_obj?.name,
+        manufacturerId: manufacturer || undefined,
+        manufacturerName: manufacturer_obj?.name
+      },
+      updatedBy: 'admin@example.com',
+      updatedAt: new Date().toISOString()
+    };
+
+    dataStore.updateProduct(product.id, updatedProduct);
     onNavigate('products');
   };
 
