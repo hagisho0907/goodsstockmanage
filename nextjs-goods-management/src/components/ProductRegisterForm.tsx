@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, X, Save, Check, ChevronsUpDown } from 'lucide-react';
+import { Upload, X, Save, ChevronsUpDown } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -28,6 +28,26 @@ interface ProductRegisterFormProps {
 
 const availableRegions = ['日本', '中国', '韓国', 'アメリカ', 'フランス'];
 
+type ProductFormState = {
+  name: string;
+  sku: string;
+  categoryId: string;
+  description: string;
+  storageLocationId: string;
+  initialStock: {
+    new: number;
+    used: number;
+    damaged: number;
+  };
+  productionQuantity: number;
+  salesStartDate: string;
+  salesEndDate: string;
+  licensorId: string;
+  licenseeId: string;
+  manufacturerId: string;
+  generateQr: boolean;
+};
+
 export function ProductRegisterForm({ onNavigate }: ProductRegisterFormProps) {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [salesRegions, setSalesRegions] = useState<string[]>([]);
@@ -35,7 +55,7 @@ export function ProductRegisterForm({ onNavigate }: ProductRegisterFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // フォーム状態
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProductFormState>({
     name: '',
     sku: '',
     categoryId: '',
@@ -75,7 +95,10 @@ export function ProductRegisterForm({ onNavigate }: ProductRegisterFormProps) {
     }
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = <K extends keyof ProductFormState>(
+    field: K,
+    value: ProductFormState[K],
+  ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -403,23 +426,18 @@ export function ProductRegisterForm({ onNavigate }: ProductRegisterFormProps) {
               <PopoverContent className="w-full p-0" align="start">
                 <div className="p-3 space-y-2">
                   {availableRegions.map((region) => (
-                    <div
+                    <Label
                       key={region}
-                      className="flex items-center space-x-2 cursor-pointer hover:bg-accent rounded-md p-2"
-                      onClick={() => toggleRegion(region)}
+                      htmlFor={`region-${region}`}
+                      className="flex items-center gap-3 rounded-md p-2 cursor-pointer hover:bg-accent"
                     >
                       <Checkbox
                         id={`region-${region}`}
                         checked={salesRegions.includes(region)}
-                        readOnly
+                        onCheckedChange={() => toggleRegion(region)}
                       />
-                      <Label
-                        htmlFor={`region-${region}`}
-                        className="cursor-pointer"
-                      >
-                        {region}
-                      </Label>
-                    </div>
+                      <span>{region}</span>
+                    </Label>
                   ))}
                 </div>
               </PopoverContent>
@@ -511,7 +529,7 @@ export function ProductRegisterForm({ onNavigate }: ProductRegisterFormProps) {
         <Checkbox 
           id="generateQr" 
           checked={formData.generateQr}
-          onCheckedChange={(checked) => handleInputChange('generateQr', checked)}
+          onCheckedChange={(checked) => handleInputChange('generateQr', Boolean(checked))}
         />
         <Label htmlFor="generateQr" className="cursor-pointer">
           QRコードを自動生成する

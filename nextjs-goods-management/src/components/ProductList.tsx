@@ -70,7 +70,10 @@ export function ProductList({ onNavigate }: ProductListProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <h1>物品一覧</h1>
-        <Button onClick={() => onNavigate('product-register')} className="bg-[#2563EB] hover:bg-[#1d4ed8]">
+        <Button
+          onClick={() => onNavigate('product-register')}
+          className="shadow-[0_10px_24px_rgba(37,99,235,0.2)]"
+        >
           <Plus className="h-4 w-4 mr-2" />
           物品登録
         </Button>
@@ -116,7 +119,7 @@ export function ProductList({ onNavigate }: ProductListProps) {
       </div>
 
       {/* Product Table - Desktop */}
-      <div className="hidden md:block rounded-lg border bg-white">
+      <div className="hidden md:block rounded-xl border border-border/60 bg-card shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>

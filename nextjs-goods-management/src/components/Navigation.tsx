@@ -53,8 +53,9 @@ export function Navigation({ currentPage, onNavigate, isMobileOpen }: Navigation
   return (
     <nav
       className={`
-        fixed md:static inset-y-0 left-0 z-40 w-64 
-        bg-white border-r transform transition-transform duration-200 ease-in-out
+        fixed md:static inset-y-0 left-0 z-40 w-64
+        bg-white/90 border-r border-border/70 backdrop-blur-md shadow-sm
+        transform transition-transform duration-200 ease-in-out
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}
     >
@@ -66,10 +67,12 @@ export function Navigation({ currentPage, onNavigate, isMobileOpen }: Navigation
           return (
             <Button
               key={item.id}
-              variant={isActive ? 'default' : 'ghost'}
+              variant="ghost"
               className={`
-                w-full justify-start gap-3
-                ${isActive ? 'bg-[#2563EB] hover:bg-[#1d4ed8]' : ''}
+                w-full justify-start gap-3 rounded-lg border border-transparent
+                text-sm transition-all
+                hover:border-primary/30 hover:bg-primary/10 hover:text-primary
+                ${isActive ? 'bg-primary text-primary-foreground shadow-[0_6px_14px_rgba(37,99,235,0.18)] hover:bg-primary/90 hover:text-primary-foreground' : 'text-muted-foreground'}
               `}
               onClick={() => onNavigate(item.id)}
             >

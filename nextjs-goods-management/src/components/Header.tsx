@@ -30,7 +30,7 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/90 backdrop-blur-md shadow-sm">
       <div className="flex h-16 items-center gap-4 px-4">
         <Button
           variant="ghost"
@@ -41,17 +41,24 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
           <Menu className="h-5 w-5" />
         </Button>
 
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-[#2563EB] flex items-center justify-center">
-            <span className="text-white">IP</span>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-[0_6px_14px_rgba(37,99,235,0.28)]">
+            <span className="text-primary-foreground font-semibold">IP</span>
           </div>
-          <h1 className="text-lg md:text-xl">グッズ在庫管理システム</h1>
+          <div>
+            <h1 className="text-lg md:text-xl font-semibold text-foreground">
+              グッズ在庫管理システム
+            </h1>
+            <p className="text-xs text-muted-foreground hidden sm:block">
+              IPグッズの在庫状況をリアルタイムに可視化
+            </p>
+          </div>
         </div>
 
         <div className="ml-auto flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" className="relative text-muted-foreground">
                 <Bell className="h-5 w-5" />
                 {notificationCount > 0 && (
                   <Badge
@@ -111,7 +118,7 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2">
+              <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
                 <User className="h-5 w-5" />
                 <span className="hidden md:inline">{user?.name || 'ゲスト'}</span>
               </Button>
