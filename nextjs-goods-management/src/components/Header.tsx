@@ -31,31 +31,34 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/95 backdrop-blur-md shadow-sm">
-      <div className="flex h-12 sm:h-14 md:h-16 items-center gap-2 sm:gap-4 px-2 sm:px-4">
+      <div className="flex h-14 sm:h-16 items-center px-3 sm:px-4">
+        {/* ハンバーガーメニュー（モバイルのみ） */}
         <Button
           variant="ghost"
           size="icon"
           onClick={onMenuClick}
-          className="md:hidden min-w-[44px] min-h-[44px] p-2"
+          className="md:hidden min-w-[44px] min-h-[44px] p-2 mr-2"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-6 w-6" />
         </Button>
 
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-primary flex items-center justify-center shadow-[0_6px_14px_rgba(37,99,235,0.28)] shrink-0">
+        {/* ロゴとタイトル */}
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary flex items-center justify-center shadow-[0_6px_14px_rgba(37,99,235,0.28)] shrink-0">
             <span className="text-primary-foreground font-semibold text-sm sm:text-base">IP</span>
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-sm sm:text-base md:text-lg lg:text-xl font-semibold text-foreground truncate">
+            <h1 className="text-base sm:text-lg md:text-xl font-semibold text-foreground truncate">
               グッズ在庫管理システム
             </h1>
-            <p className="text-xs text-muted-foreground hidden sm:block truncate">
+            <p className="text-xs text-muted-foreground hidden md:block truncate">
               IPグッズの在庫状況をリアルタイムに可視化
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {/* 右側のボタン群 */}
+        <div className="flex items-center gap-2 shrink-0 ml-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative text-muted-foreground min-w-[44px] min-h-[44px] p-2">
@@ -63,7 +66,7 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
                 {notificationCount > 0 && (
                   <Badge
                     variant="destructive"
-                    className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
                   >
                     {notificationCount > 9 ? '9+' : notificationCount}
                   </Badge>
@@ -120,9 +123,9 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground min-h-[44px] px-2 sm:px-3 py-2">
+              <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground min-h-[44px] px-3 py-2">
                 <User className="h-5 w-5 shrink-0" />
-                <span className="hidden sm:inline truncate max-w-20 md:max-w-none">{user?.name || 'ゲスト'}</span>
+                <span className="hidden sm:inline truncate max-w-24">{user?.name || 'ゲスト'}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="user-dropdown">
