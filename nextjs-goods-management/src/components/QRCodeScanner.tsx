@@ -60,6 +60,8 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // カメラの利用可能性をチェック
   useEffect(() => {
@@ -79,25 +81,77 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
     }
   }, []);
 
+  // コンポーネントアンマウント時のクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      if (scanIntervalRef.current) {
+        clearInterval(scanIntervalRef.current);
+      }
+    };
+  }, []);
+
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: 'environment',
-          width: { ideal: 640 },
-          height: { ideal: 480 }
-        }
-      });
+      // iOSでのカメラアクセス改善のための設定
+      const constraints = {
+        video: {
+          facingMode: { ideal: 'environment' }, // idealを使用してfallbackを許可
+          width: { min: 320, ideal: 640, max: 1920 },
+          height: { min: 240, ideal: 480, max: 1080 }
+        },
+        audio: false // 明示的にオーディオを無効化
+      };
+
+      // iOS Safari対応：getUserMediaの前にデバイスをチェック
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('カメラAPIがサポートされていません');
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
-        setIsScanning(true);
-        toast.success('カメラを起動しました');
+        
+        // iOS対応：videoの自動再生を確実にする
+        videoRef.current.playsInline = true;
+        videoRef.current.muted = true;
+        videoRef.current.autoplay = true;
+        
+        // loadedmetadataイベントを待ってからスキャン開始
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            videoRef.current.play().then(() => {
+              setIsScanning(true);
+              startQRScan(); // QRコードスキャン開始
+              toast.success('カメラを起動しました');
+            }).catch(() => {
+              toast.error('カメラの再生に失敗しました');
+            });
+          }
+        };
       }
     } catch (error) {
       console.error('Camera access failed:', error);
-      toast.error('カメラへのアクセスに失敗しました');
+      
+      // エラーの詳細に応じたメッセージ
+      let errorMessage = 'カメラへのアクセスに失敗しました';
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = 'カメラの使用許可が必要です。ブラウザの設定を確認してください';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = 'カメラが見つかりません';
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = 'カメラが他のアプリで使用中です';
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage = 'HTTPS環境が必要です';
+        }
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -109,8 +163,41 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    // QRスキャン停止
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
     setIsScanning(false);
     toast.info('カメラを停止しました');
+  };
+
+  // リアルタイムQRコードスキャン機能
+  const startQRScan = () => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+    }
+
+    scanIntervalRef.current = setInterval(() => {
+      if (videoRef.current && canvasRef.current && isScanning) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA && ctx) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+          if (code && code.data) {
+            handleScan(code.data);
+          }
+        }
+      }
+    }, 300); // 300ms間隔でスキャン
   };
 
   const handleScan = useCallback((result: string) => {
@@ -345,7 +432,11 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
                     autoPlay
                     playsInline
                     muted
-                    className="w-full h-full object-cover"
+                    controls={false}
+                    webkit-playsinline="true"
+                    x-webkit-airplay="allow"
+                    style={{ objectFit: 'cover' }}
+                    className="w-full h-full"
                   />
                   <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -642,6 +733,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* QRコード検出用の非表示canvas */}
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
     </div>
   );
 }
