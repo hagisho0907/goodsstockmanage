@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Camera, Search, X, Save } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Camera, Search, X, Save, ArrowRightLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -14,6 +14,8 @@ import {
 import { Card, CardContent } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
+import { QRCodeScanner } from './QRCodeScanner';
+import { dataStore } from '../lib/dataStore';
 
 interface StockMovementProps {
   onNavigate: (page: string) => void;
@@ -29,22 +31,25 @@ interface ScannedProduct {
 export function StockMovement({ onNavigate }: StockMovementProps) {
   const [activeTab, setActiveTab] = useState<'in' | 'out'>('in');
   const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([]);
-  const [isScanning, setIsScanning] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
 
-  const handleScan = () => {
-    setIsScanning(true);
-    // Simulate scanning
-    setTimeout(() => {
-      const mockProduct: ScannedProduct = {
-        id: String(Date.now()),
-        name: 'キャラクターA フィギュア 限定版',
-        sku: 'A001',
-        quantity: 10,
+  // QRスキャナーからの商品検出時の処理
+  const handleProductDetected = useCallback((productId: string) => {
+    const products = dataStore.getProducts();
+    const product = products.find(p => p.id === productId);
+    
+    if (product) {
+      const newScannedProduct: ScannedProduct = {
+        id: productId + '-' + Date.now(), // 重複を避けるためのユニークID
+        name: product.name,
+        sku: product.sku,
+        quantity: 1,
       };
-      setScannedProducts([...scannedProducts, mockProduct]);
-      setIsScanning(false);
-    }, 1000);
-  };
+      
+      setScannedProducts(prev => [...prev, newScannedProduct]);
+      setShowScanner(false);
+    }
+  }, []);
 
   const removeProduct = (id: string) => {
     setScannedProducts(scannedProducts.filter(p => p.id !== id));
@@ -82,45 +87,66 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
               <CardContent className="pt-6">
                 <Label>スキャンモード</Label>
                 <div className="mt-3 space-y-4">
-                  <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center min-h-[200px] bg-gray-50">
-                    {isScanning ? (
-                      <div className="text-center">
-                        <div className="animate-pulse">
-                          <Camera className="h-16 w-16 mx-auto text-[#2563EB] mb-4" />
-                          <p className="text-lg">スキャン中...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <Camera className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                        <p className="text-lg mb-4">QRコード/バーコードをスキャン</p>
+                  {showScanner ? (
+                    <div className="border rounded-lg overflow-hidden">
+                      <QRCodeScanner 
+                        onNavigate={() => {}} // ダミー関数
+                        mode={activeTab === 'in' ? 'stock-in' : 'stock-out'}
+                        onProductDetected={handleProductDetected}
+                      />
+                      <div className="p-4 border-t bg-gray-50">
                         <Button
                           type="button"
-                          onClick={handleScan}
-                          className="bg-[#2563EB] hover:bg-[#1d4ed8]"
+                          variant="outline"
+                          onClick={() => setShowScanner(false)}
+                          className="w-full"
                         >
-                          <Camera className="h-4 w-4 mr-2" />
-                          カメラ起動
+                          スキャンを終了
                         </Button>
                       </div>
-                    )}
-                  </div>
-
-                  <div className="text-center text-muted-foreground">または</div>
-
-                  <div>
-                    <Label htmlFor="manualSearch">手動入力</Label>
-                    <div className="flex gap-2 mt-2">
-                      <Input
-                        id="manualSearch"
-                        placeholder="SKU/商品名を入力"
-                        className="flex-1"
-                      />
-                      <Button type="button" variant="outline">
-                        <Search className="h-4 w-4" />
-                      </Button>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center min-h-[200px] bg-gray-50">
+                        <div className="text-center">
+                          <ArrowRightLeft className={`h-16 w-16 mx-auto mb-4 ${
+                            activeTab === 'in' ? 'text-[#10B981]' : 'text-[#2563EB]'
+                          }`} />
+                          <p className="text-lg mb-4">
+                            {activeTab === 'in' ? '入庫する' : '出庫する'}商品のQRコードをスキャン
+                          </p>
+                          <Button
+                            type="button"
+                            onClick={() => setShowScanner(true)}
+                            className={`${
+                              activeTab === 'in' 
+                                ? 'bg-[#10B981] hover:bg-[#059669]' 
+                                : 'bg-[#2563EB] hover:bg-[#1d4ed8]'
+                            }`}
+                          >
+                            <Camera className="h-4 w-4 mr-2" />
+                            QRスキャン開始
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="text-center text-muted-foreground">または</div>
+
+                      <div>
+                        <Label htmlFor="manualSearch">手動入力</Label>
+                        <div className="flex gap-2 mt-2">
+                          <Input
+                            id="manualSearch"
+                            placeholder="SKU/商品名を入力"
+                            className="flex-1"
+                          />
+                          <Button type="button" variant="outline">
+                            <Search className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

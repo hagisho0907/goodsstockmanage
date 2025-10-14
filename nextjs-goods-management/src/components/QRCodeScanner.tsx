@@ -28,6 +28,7 @@ import { Product } from '../types';
 interface QRCodeScannerProps {
   onNavigate: (page: string, id?: string) => void;
   mode?: 'search' | 'stock-in' | 'stock-out';
+  onProductDetected?: (productId: string) => void; // 商品検出時のコールバック
 }
 
 interface ScanResult {
@@ -43,7 +44,7 @@ interface ScanResult {
   custom?: string;
 }
 
-export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProps) {
+export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }: QRCodeScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [foundProduct, setFoundProduct] = useState<Product | null>(null);
@@ -237,14 +238,15 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
         // モードに応じた処理
         switch (mode) {
           case 'stock-in':
-            setTimeout(() => {
-              onNavigate('stock-movement', product.id);
-            }, 1500);
-            break;
           case 'stock-out':
-            setTimeout(() => {
-              onNavigate('stock-movement', product.id);
-            }, 1500);
+            if (onProductDetected) {
+              // 入出庫モードでは即座にコールバックを呼び出し
+              onProductDetected(product.id);
+            } else {
+              setTimeout(() => {
+                onNavigate('stock-movement', product.id);
+              }, 1500);
+            }
             break;
           case 'search':
           default:
@@ -261,7 +263,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
     } catch (error) {
       toast.error('QRコードの読み取りに失敗しました');
     }
-  }, [continuousMode, mode, onNavigate]);
+  }, [continuousMode, mode, onNavigate, onProductDetected]);
 
   // 画像ファイルからQRコードを読み取る
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
