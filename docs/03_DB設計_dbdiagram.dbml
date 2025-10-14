@@ -1,0 +1,268 @@
+// IPグッズ在庫管理システム データベース設計
+// dbdiagram.io で使用可能なDBMLファイル
+// https://dbdiagram.io/d でインポートしてください
+
+// ユーザー管理
+Table users {
+  id uuid [pk, note: "主キー"]
+  email varchar(255) [not null, unique, note: "メールアドレス"]
+  password_hash varchar(255) [not null]
+  name varchar(100) [not null, note: "ユーザー名"]
+  is_active boolean [not null, default: true]
+  last_login_at timestamp
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    email [unique]
+  }
+}
+
+Table roles {
+  id uuid [pk]
+  name varchar(50) [not null, note: "ロール名"]
+  description text
+  permissions jsonb [not null, default: '{}', note: "権限設定JSON"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table user_roles {
+  user_id uuid [not null]
+  role_id uuid [not null]
+  assigned_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    (user_id, role_id) [pk]
+  }
+}
+
+// マスタデータ
+Table categories {
+  id uuid [pk]
+  name varchar(100) [not null, note: "カテゴリー名"]
+  parent_id uuid [note: "親カテゴリーID"]
+  sort_order integer [not null, default: 0]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table storage_locations {
+  id uuid [pk]
+  name varchar(100) [not null, note: "場所名"]
+  code varchar(50) [not null, unique, note: "場所コード"]
+  description text
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table manufacturers {
+  id uuid [pk]
+  name varchar(200) [not null, note: "会社名"]
+  contact_info jsonb [default: '{}', note: "連絡先情報JSON"]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+// 商品管理
+Table products {
+  id uuid [pk]
+  sku varchar(100) [not null, unique, note: "商品コード"]
+  name varchar(200) [not null, note: "商品名"]
+  description text
+  category_id uuid
+  current_stock integer [not null, default: 0, note: "現在庫数"]
+  min_stock integer [not null, default: 0, note: "最小在庫数"]
+  storage_location_id uuid
+  status varchar(20) [not null, default: 'new', note: "new/used/damaged"]
+  barcode varchar(100)
+  qr_code varchar(255)
+  created_by uuid [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    sku
+    category_id
+    storage_location_id
+    created_at
+  }
+}
+
+Table product_ip_info {
+  product_id uuid [pk, note: "商品ID"]
+  production_quantity integer [note: "製造数（限定数）"]
+  sales_regions text[] [default: '{}', note: "販売可能地域配列"]
+  sales_start_date date
+  sales_end_date date
+  licensor varchar(200) [note: "版元"]
+  licensee varchar(200) [note: "ライセンシー"]
+  manufacturer_id uuid
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    sales_end_date
+  }
+}
+
+Table product_images {
+  id uuid [pk]
+  product_id uuid [not null]
+  image_url varchar(500) [not null]
+  is_primary boolean [not null, default: false]
+  sort_order integer [not null, default: 0]
+  uploaded_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    product_id
+  }
+}
+
+// 在庫移動
+Table movement_types {
+  id uuid [pk]
+  code varchar(20) [not null, unique]
+  name varchar(50) [not null]
+  movement_direction varchar(10) [not null, note: "in/out"]
+}
+
+Table stock_movements {
+  id uuid [pk]
+  product_id uuid [not null]
+  movement_type_id uuid [not null]
+  quantity integer [not null]
+  from_location_id uuid
+  to_location_id uuid
+  destination_info jsonb [default: '{}', note: "出庫先情報"]
+  notes text
+  created_by uuid [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    product_id
+    created_at
+    movement_type_id
+  }
+}
+
+// 商品メモ・申し送り
+Table product_notes {
+  id uuid [pk]
+  product_id uuid [not null]
+  note_type varchar(50) [not null, default: 'general']
+  content text [not null]
+  attachments jsonb [default: '[]', note: "添付ファイル情報"]
+  created_by uuid [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  
+  indexes {
+    product_id
+  }
+}
+
+// アラート管理
+Table alert_types {
+  id uuid [pk]
+  code varchar(20) [not null, unique]
+  name varchar(50) [not null]
+  priority varchar(10) [not null, default: 'medium', note: "low/medium/high"]
+}
+
+Table alerts {
+  id uuid [pk]
+  alert_type_id uuid [not null]
+  name varchar(100) [not null]
+  conditions jsonb [not null, default: '{}', note: "発動条件"]
+  is_active boolean [not null, default: true]
+  notification_channels text[] [not null, default: '{}']
+  created_by uuid [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+// 棚卸し
+Table stocktakings {
+  id uuid [pk]
+  name varchar(100) [not null]
+  target_date date [not null]
+  status varchar(20) [not null, default: 'in_progress']
+  performed_by uuid [not null]
+  started_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  completed_at timestamp
+}
+
+Table stocktaking_items {
+  id uuid [pk]
+  stocktaking_id uuid [not null]
+  product_id uuid [not null]
+  theoretical_stock integer [not null, note: "理論在庫"]
+  actual_stock integer [note: "実在庫"]
+  difference integer [note: "差異"]
+  checked_at timestamp
+  
+  indexes {
+    stocktaking_id
+    product_id
+  }
+}
+
+// リレーションシップ定義
+Ref: user_roles.user_id > users.id
+Ref: user_roles.role_id > roles.id
+
+Ref: products.category_id > categories.id
+Ref: products.storage_location_id > storage_locations.id
+Ref: products.created_by > users.id
+
+Ref: product_ip_info.product_id - products.id
+Ref: product_ip_info.manufacturer_id > manufacturers.id
+
+Ref: product_images.product_id > products.id
+
+Ref: stock_movements.product_id > products.id
+Ref: stock_movements.movement_type_id > movement_types.id
+Ref: stock_movements.from_location_id > storage_locations.id
+Ref: stock_movements.to_location_id > storage_locations.id
+Ref: stock_movements.created_by > users.id
+
+Ref: product_notes.product_id > products.id
+Ref: product_notes.created_by > users.id
+
+Ref: alerts.alert_type_id > alert_types.id
+Ref: alerts.created_by > users.id
+
+Ref: stocktakings.performed_by > users.id
+
+Ref: stocktaking_items.stocktaking_id > stocktakings.id
+Ref: stocktaking_items.product_id > products.id
+
+// テーブルグループ（視覚的整理用）
+TableGroup user_management {
+  users
+  roles
+  user_roles
+}
+
+TableGroup master_data {
+  categories
+  storage_locations
+  manufacturers
+}
+
+TableGroup product_management {
+  products
+  product_ip_info
+  product_images
+  product_notes
+}
+
+TableGroup inventory_movement {
+  movement_types
+  stock_movements
+}
+
+TableGroup monitoring {
+  alert_types
+  alerts
+}
+
+TableGroup stocktaking_management {
+  stocktakings
+  stocktaking_items
+}
