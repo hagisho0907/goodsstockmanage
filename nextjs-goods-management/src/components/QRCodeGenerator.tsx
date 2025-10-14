@@ -44,7 +44,7 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
       return;
     }
 
-    const data: Record<string, any> = {
+    const data: Record<string, string | number> = {
       id: selectedProduct.id,
       type: 'product'
     };

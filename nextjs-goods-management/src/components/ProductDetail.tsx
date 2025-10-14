@@ -35,7 +35,7 @@ export function ProductDetail({ productId, onNavigate }: ProductDetailProps) {
   const notes = productNotes.filter(n => n.productId === product.id).sort((a, b) => 
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-  const stockStatus = product.currentStock === 0 ? 'out' : product.currentStock < product.minStock ? 'low' : 'ok';
+  const stockStatus = product.currentStock === 0 ? 'out' : product.currentStock < 10 ? 'low' : 'ok';
   
   const getExpiryStatus = () => {
     if (!product.ipInfo?.salesEndDate) return 'ok';
@@ -512,11 +512,36 @@ export function ProductDetail({ productId, onNavigate }: ProductDetailProps) {
     </div>
     
     {/* QRコード生成ダイアログ */}
-    <QRCodeGenerator 
-      product={product}
-      isOpen={showQRCode}
-      onClose={() => setShowQRCode(false)}
-    />
+    {showQRCode && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg max-w-lg w-full mx-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">QRコード生成</h3>
+            <button onClick={() => setShowQRCode(false)} className="text-gray-500 hover:text-gray-700">
+              ✕
+            </button>
+          </div>
+          <p>QRコード生成機能は「QR生成」ページでご利用ください。</p>
+          <div className="mt-4">
+            <button 
+              onClick={() => {
+                onNavigate('qr-generator', product.id);
+                setShowQRCode(false);
+              }}
+              className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
+            >
+              QR生成ページへ
+            </button>
+            <button 
+              onClick={() => setShowQRCode(false)}
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded"
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }

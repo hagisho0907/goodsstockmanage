@@ -41,9 +41,9 @@ export function ProductList({ onNavigate }: ProductListProps) {
     return 'ok';
   };
 
-  const getStockStatus = (currentStock: number, minStock: number) => {
+  const getStockStatus = (currentStock: number) => {
     if (currentStock === 0) return 'out';
-    if (currentStock < minStock) return 'low';
+    if (currentStock < 10) return 'low';
     return 'ok';
   };
 
@@ -129,7 +129,7 @@ export function ProductList({ onNavigate }: ProductListProps) {
           <TableBody>
             {filteredProducts.map((product) => {
               const expiryStatus = getExpiryStatus(product.ipInfo?.salesEndDate);
-              const stockStatus = getStockStatus(product.currentStock, product.minStock);
+              const stockStatus = getStockStatus(product.currentStock);
 
               return (
                 <TableRow key={product.id}>
@@ -232,7 +232,7 @@ export function ProductList({ onNavigate }: ProductListProps) {
       <div className="md:hidden space-y-3">
         {filteredProducts.map((product) => {
           const expiryStatus = getExpiryStatus(product.ipInfo?.salesEndDate);
-          const stockStatus = getStockStatus(product.currentStock, product.minStock);
+          const stockStatus = getStockStatus(product.currentStock);
 
           return (
             <div key={product.id} className="bg-white rounded-lg border p-4 space-y-3">
