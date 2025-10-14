@@ -193,6 +193,7 @@ export function UserManagement({ onNavigate }: UserManagementProps) {
       : [...currentAccess, locationId];
 
     if (isEdit && editUser) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setter({ ...editUser, storageLocationAccess: newAccess } as any);
     } else {
       setter(prev => ({ ...prev, storageLocationAccess: newAccess }));
