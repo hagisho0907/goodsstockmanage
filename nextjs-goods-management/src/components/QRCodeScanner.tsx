@@ -61,7 +61,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     data: ScanResult;
     product?: Product;
   }>>([]);
-  const [hasCamera, setHasCamera] = useState(false);
+  const [hasCamera, setHasCamera] = useState(true); // デフォルトをtrueに変更してHydrationエラーを回避
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [isRequestingCamera, setIsRequestingCamera] = useState(false);
@@ -189,6 +189,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   }, [handleScan]);
 
   const updateCameraDevices = useCallback(async () => {
+    // クライアントサイドでのみ実行
+    if (typeof window === 'undefined') return;
+    
     if (!navigator.mediaDevices?.enumerateDevices) {
       setHasCamera(false);
       setCameraDevices([]);
@@ -224,6 +227,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
   // カメラの利用可能性をチェック
   useEffect(() => {
+    // クライアントサイドでのみ実行
+    if (typeof window === 'undefined') return;
+
     // HTTPSチェック
     if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
       console.warn('カメラアクセスにはHTTPS環境が必要です');
@@ -239,6 +245,8 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   }, [updateCameraDevices]);
 
   useEffect(() => {
+    // クライアントサイドでのみ実行
+    if (typeof window === 'undefined') return;
     if (!navigator.mediaDevices?.addEventListener) return;
 
     const handleDeviceChange = () => {
@@ -260,6 +268,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   }, [stopCamera]);
 
   useEffect(() => {
+    // クライアントサイドでのみ実行
+    if (typeof window === 'undefined') return;
+    
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         stopCamera({ silent: true });
@@ -274,6 +285,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
   const startCamera = useCallback(
     async (targetDeviceId?: string) => {
+      // クライアントサイドでのみ実行
+      if (typeof window === 'undefined') return;
+      
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         toast.error('カメラAPIがサポートされていません');
         console.error('navigator.mediaDevices.getUserMedia is not available');
@@ -284,9 +298,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         stopCamera({ silent: true });
         setIsRequestingCamera(true);
 
-        // iOS向けの処理
-        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-        const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+        // iOS向けの処理（クライアントサイドでのみ）
+        const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const isSafari = typeof navigator !== 'undefined' && /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
         
         if (isIOS && isSafari) {
           console.log('iOS Safari detected - using special handling');
@@ -644,8 +658,6 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                     playsInline
                     muted
                     controls={false}
-                    webkit-playsinline="true"
-                    x-webkit-airplay="allow"
                     style={{ objectFit: 'cover' }}
                     className="w-full h-full"
                   />
