@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Header } from './Header';
 import { Navigation } from './Navigation';
 import { Dashboard } from './Dashboard';
@@ -18,11 +18,9 @@ import { QRCodeGenerator } from './QRCodeGenerator';
 import { QRCodeScanner } from './QRCodeScanner';
 import { Toaster } from './ui/sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 
 export default function App() {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
+  const { isLoading } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -80,12 +78,6 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login');
-    }
-  }, [isLoading, user, router]);
-
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -94,10 +86,6 @@ export default function App() {
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return null;
   }
 
   return (

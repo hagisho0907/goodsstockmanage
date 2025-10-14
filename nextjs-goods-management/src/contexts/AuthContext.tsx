@@ -20,6 +20,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const defaultUser: User = {
+  email: 'admin@example.com',
+  name: '管理者',
+  role: 'admin',
+  department: 'グッズ管理部',
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -51,7 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         department: 'グッズ管理部'
       });
     } else {
-      setUser(null);
+      // ログインページを使わず常に管理者として開始
+      localStorage.setItem('authToken', 'demo-token');
+      localStorage.setItem('userEmail', defaultUser.email);
+      setUser(defaultUser);
     }
     setIsLoading(false);
   };
