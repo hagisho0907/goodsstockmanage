@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { stocktakings, products } from '../lib/mockData';
-import { Stocktaking, StocktakingItem, Product } from '../types';
+import type { Stocktaking, StocktakingItem, Product } from '../types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
