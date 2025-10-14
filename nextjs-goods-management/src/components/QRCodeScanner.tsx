@@ -68,7 +68,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
       }
     };
 
-    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function') {
       checkCamera();
     }
   }, []);

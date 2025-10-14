@@ -50,12 +50,12 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
     };
 
     if (includeDetails.name) data.name = selectedProduct.name;
-    if (includeDetails.jan) data.jan = selectedProduct.janCode;
-    if (includeDetails.category) data.category = selectedProduct.category;
-    if (includeDetails.location) data.location = selectedProduct.storageLocation;
-    if (includeDetails.price) data.price = selectedProduct.unitPrice;
-    if (includeDetails.quantity) data.quantity = selectedProduct.totalStock;
-    if (includeDetails.expiryDate) data.expiryDate = selectedProduct.sellByDate;
+    if (includeDetails.jan) data.jan = selectedProduct.sku;
+    if (includeDetails.category) data.category = selectedProduct.categoryName;
+    if (includeDetails.location) data.location = selectedProduct.storageLocationName;
+    if (includeDetails.price) data.price = 0; // Price not available in Product type
+    if (includeDetails.quantity) data.quantity = selectedProduct.currentStock;
+    if (includeDetails.expiryDate) data.expiryDate = selectedProduct.ipInfo?.salesEndDate || '';
 
     if (customText) {
       data.custom = customText;
@@ -79,7 +79,7 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
       });
 
       const link = document.createElement('a');
-      link.download = `qr-${selectedProduct?.janCode || 'custom'}-${Date.now()}.png`;
+      link.download = `qr-${selectedProduct?.sku || 'custom'}-${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
       
@@ -151,7 +151,7 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
           ${selectedProduct ? `
             <div class="product-info">
               <strong>${selectedProduct.name}</strong><br>
-              JAN: ${selectedProduct.janCode}
+              SKU: ${selectedProduct.sku}
             </div>
           ` : ''}
         </div>
@@ -200,7 +200,7 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
                       <div className="flex flex-col">
                         <span>{product.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          JAN: {product.janCode}
+                          SKU: {product.sku}
                         </span>
                       </div>
                     </SelectItem>
@@ -215,7 +215,7 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
               <Label>含める情報</Label>
               {Object.entries({
                 name: '商品名',
-                jan: 'JANコード',
+                jan: 'SKUコード',
                 category: 'カテゴリ',
                 location: '保管場所',
                 price: '単価',
@@ -297,7 +297,7 @@ export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps)
                   <div className="p-3 bg-gray-50 rounded-lg">
                     <p className="font-medium">{selectedProduct.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      JAN: {selectedProduct.janCode}
+                      SKU: {selectedProduct.sku}
                     </p>
                   </div>
                 )}
