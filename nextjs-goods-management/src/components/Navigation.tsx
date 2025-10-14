@@ -76,8 +76,7 @@ export function Navigation({ currentPage, onNavigate, isMobileOpen }: Navigation
               variant="ghost"
               className={`
                 w-full justify-start gap-3 rounded-lg border border-transparent
-                text-sm md:text-sm transition-all mobile-button
-                min-h-[44px] px-3 py-2
+                text-sm transition-all min-h-[44px] px-3 py-3
                 hover:border-primary/30 hover:bg-primary/10 hover:text-primary
                 ${isActive ? 'bg-primary text-primary-foreground shadow-[0_6px_14px_rgba(37,99,235,0.18)] hover:bg-primary/90 hover:text-primary-foreground' : 'text-muted-foreground'}
               `}

@@ -590,18 +590,18 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       <audio ref={audioRef} src="/beep.mp3" />
 
       <Tabs defaultValue="scanner" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 mobile-spacing">
-          <TabsTrigger value="scanner" className="text-xs sm:text-sm mobile-button">スキャナー</TabsTrigger>
-          <TabsTrigger value="upload" className="text-xs sm:text-sm mobile-button">画像アップロード</TabsTrigger>
-          <TabsTrigger value="history" className="text-xs sm:text-sm mobile-button">スキャン履歴</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 gap-1">
+          <TabsTrigger value="scanner" className="text-xs sm:text-sm py-3 min-h-[44px]">スキャナー</TabsTrigger>
+          <TabsTrigger value="upload" className="text-xs sm:text-sm py-3 min-h-[44px]">画像アップロード</TabsTrigger>
+          <TabsTrigger value="history" className="text-xs sm:text-sm py-3 min-h-[44px]">スキャン履歴</TabsTrigger>
         </TabsList>
 
         <TabsContent value="scanner" className="space-y-4">
           <Card>
             <CardHeader>
               <div className="flex flex-col gap-3">
-                <CardTitle className="mobile-title">カメラスキャン</CardTitle>
-                <div className="flex flex-col gap-3 mobile-spacing">
+                <CardTitle className="text-lg sm:text-xl">カメラスキャン</CardTitle>
+                <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Switch
@@ -616,7 +616,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                         onClick={() => (isScanning ? stopCamera() : startCamera())}
                         variant={isScanning ? 'destructive' : 'default'}
                         disabled={isRequestingCamera}
-                        className="mobile-button"
+                        className="min-h-[44px] px-4 py-2"
                       >
                         {isRequestingCamera ? (
                           <>
@@ -648,7 +648,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                   </div>
                   
                   {hasCamera && cameraDevices.length > 1 && (
-                    <div className="flex flex-col sm:flex-row gap-2 mobile-form">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <Select
                         value={selectedCameraId || 'auto'}
                         onValueChange={handleCameraChange}
@@ -671,7 +671,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                         size="sm"
                         onClick={handleCycleCamera}
                         disabled={isRequestingCamera}
-                        className="mobile-button"
+                        className="min-h-[44px] px-4 py-2"
                       >
                         カメラ切替
                       </Button>

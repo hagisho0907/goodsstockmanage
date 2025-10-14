@@ -70,23 +70,23 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-4xl mobile-spacing">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6 max-w-4xl">
       {/* Header */}
-      <h1 className="mobile-title">入出庫</h1>
+      <h1 className="text-xl sm:text-2xl font-bold">入出庫</h1>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'in' | 'out')}>
-        <TabsList className="grid w-full max-w-md grid-cols-2 mobile-spacing">
-          <TabsTrigger value="in" className="mobile-button">入庫</TabsTrigger>
-          <TabsTrigger value="out" className="mobile-button">出庫</TabsTrigger>
+        <TabsList className="grid w-full max-w-md grid-cols-2 gap-1">
+          <TabsTrigger value="in" className="py-3 min-h-[44px]">入庫</TabsTrigger>
+          <TabsTrigger value="out" className="py-3 min-h-[44px]">出庫</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 mobile-spacing">
+          <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 md:space-y-6">
             {/* Scan Mode */}
             <Card>
               <CardContent className="pt-4 sm:pt-6">
                 <Label className="text-sm sm:text-base">スキャンモード</Label>
-                <div className="mt-3 space-y-4 mobile-spacing">
+                <div className="mt-3 space-y-3 sm:space-y-4">
                   {showScanner ? (
                     <div className="border rounded-lg overflow-hidden">
                       <QRCodeScanner 
@@ -99,7 +99,7 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                           type="button"
                           variant="outline"
                           onClick={() => setShowScanner(false)}
-                          className="w-full mobile-button"
+                          className="w-full min-h-[44px] py-3"
                         >
                           スキャンを終了
                         </Button>
@@ -118,7 +118,7 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                           <Button
                             type="button"
                             onClick={() => setShowScanner(true)}
-                            className={`mobile-button ${
+                            className={`min-h-[44px] px-4 py-3 ${
                               activeTab === 'in' 
                                 ? 'bg-[#10B981] hover:bg-[#059669]' 
                                 : 'bg-[#2563EB] hover:bg-[#1d4ed8]'
@@ -134,13 +134,13 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
 
                       <div>
                         <Label htmlFor="manualSearch" className="text-sm sm:text-base">手動入力</Label>
-                        <div className="flex flex-col sm:flex-row gap-2 mt-2 mobile-form">
+                        <div className="flex flex-col sm:flex-row gap-2 mt-2">
                           <Input
                             id="manualSearch"
                             placeholder="SKU/商品名を入力"
                             className="flex-1"
                           />
-                          <Button type="button" variant="outline" className="mobile-button">
+                          <Button type="button" variant="outline" className="min-h-[44px] px-4 py-2">
                             <Search className="h-4 w-4 sm:mr-2" />
                             <span className="hidden sm:inline">検索</span>
                           </Button>
@@ -290,11 +290,11 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
             </Card>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 mobile-form">
+            <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 type="submit"
                 disabled={scannedProducts.length === 0}
-                className="bg-[#10B981] hover:bg-[#059669] mobile-button order-1 sm:order-none"
+                className="bg-[#10B981] hover:bg-[#059669] min-h-[44px] px-4 py-3 order-1 sm:order-none"
               >
                 <Save className="h-4 w-4 mr-2" />
                 確定処理
@@ -303,7 +303,7 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                 type="button"
                 variant="outline"
                 onClick={() => onNavigate('dashboard')}
-                className="mobile-button order-2 sm:order-none"
+                className="min-h-[44px] px-4 py-3 order-2 sm:order-none"
               >
                 キャンセル
               </Button>
