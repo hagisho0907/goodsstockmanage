@@ -47,7 +47,14 @@ export default function LoginPage() {
         }
         
         toast.success('ログインしました');
-        router.push('/');
+        // デバッグ用ログ
+        console.log('Login successful, redirecting...');
+        console.log('Auth token set:', localStorage.getItem('authToken'));
+        
+        // 強制リダイレクト
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
       } else {
         toast.error('メールアドレスまたはパスワードが正しくありません');
       }
