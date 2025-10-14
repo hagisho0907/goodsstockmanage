@@ -590,34 +590,71 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       <audio ref={audioRef} src="/beep.mp3" />
 
       <Tabs defaultValue="scanner" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="scanner">スキャナー</TabsTrigger>
-          <TabsTrigger value="upload">画像アップロード</TabsTrigger>
-          <TabsTrigger value="history">スキャン履歴</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 mobile-spacing">
+          <TabsTrigger value="scanner" className="text-xs sm:text-sm mobile-button">スキャナー</TabsTrigger>
+          <TabsTrigger value="upload" className="text-xs sm:text-sm mobile-button">画像アップロード</TabsTrigger>
+          <TabsTrigger value="history" className="text-xs sm:text-sm mobile-button">スキャン履歴</TabsTrigger>
         </TabsList>
 
         <TabsContent value="scanner" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle>カメラスキャン</CardTitle>
-                <div className="flex flex-wrap items-center justify-end gap-3">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="continuous"
-                      checked={continuousMode}
-                      onCheckedChange={setContinuousMode}
-                    />
-                    <Label htmlFor="continuous">連続スキャン</Label>
-                  </div>
-                  {hasCamera && cameraDevices.length > 1 && (
+              <div className="flex flex-col gap-3">
+                <CardTitle className="mobile-title">カメラスキャン</CardTitle>
+                <div className="flex flex-col gap-3 mobile-spacing">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
+                      <Switch
+                        id="continuous"
+                        checked={continuousMode}
+                        onCheckedChange={setContinuousMode}
+                      />
+                      <Label htmlFor="continuous" className="text-sm">連続スキャン</Label>
+                    </div>
+                    {hasCamera ? (
+                      <Button
+                        onClick={() => (isScanning ? stopCamera() : startCamera())}
+                        variant={isScanning ? 'destructive' : 'default'}
+                        disabled={isRequestingCamera}
+                        className="mobile-button"
+                      >
+                        {isRequestingCamera ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            <span className="hidden sm:inline">準備中...</span>
+                          </>
+                        ) : isScanning ? (
+                          <>
+                            <CameraOff className="w-4 h-4 mr-2" />
+                            <span className="hidden sm:inline">スキャン停止</span>
+                            <span className="sm:hidden">停止</span>
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-4 h-4 mr-2" />
+                            <span className="hidden sm:inline">スキャン開始</span>
+                            <span className="sm:hidden">開始</span>
+                          </>
+                        )}
+                      </Button>
+                    ) : (
+                      <Alert className="p-2 flex-1 max-w-xs">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription className="text-xs">
+                          カメラが利用できません
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                  
+                  {hasCamera && cameraDevices.length > 1 && (
+                    <div className="flex flex-col sm:flex-row gap-2 mobile-form">
                       <Select
                         value={selectedCameraId || 'auto'}
                         onValueChange={handleCameraChange}
                         disabled={isRequestingCamera}
                       >
-                        <SelectTrigger className="w-[200px]">
+                        <SelectTrigger className="w-full sm:w-[200px]">
                           <SelectValue placeholder="カメラ選択" />
                         </SelectTrigger>
                         <SelectContent>
@@ -634,41 +671,11 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                         size="sm"
                         onClick={handleCycleCamera}
                         disabled={isRequestingCamera}
+                        className="mobile-button"
                       >
                         カメラ切替
                       </Button>
                     </div>
-                  )}
-                  {hasCamera ? (
-                    <Button
-                      onClick={() => (isScanning ? stopCamera() : startCamera())}
-                      variant={isScanning ? 'destructive' : 'default'}
-                      disabled={isRequestingCamera}
-                    >
-                      {isRequestingCamera ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          準備中...
-                        </>
-                      ) : isScanning ? (
-                        <>
-                          <CameraOff className="w-4 h-4 mr-2" />
-                          スキャン停止
-                        </>
-                      ) : (
-                        <>
-                          <Camera className="w-4 h-4 mr-2" />
-                          スキャン開始
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <Alert className="p-2">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="text-sm">
-                        カメラが利用できません
-                      </AlertDescription>
-                    </Alert>
                   )}
                 </div>
               </div>
@@ -683,7 +690,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                 </Alert>
               )}
               {isScanning ? (
-                <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                <div className="relative aspect-video md:aspect-video bg-black rounded-lg overflow-hidden mobile-qr-scanner">
                   <video
                     ref={videoRef}
                     autoPlay
@@ -695,16 +702,16 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                   />
                   <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-64 h-64 border-2 border-white rounded-lg">
-                        <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
-                        <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg" />
-                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg" />
-                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg" />
+                      <div className="w-48 h-48 sm:w-64 sm:h-64 border-2 border-white rounded-lg">
+                        <div className="absolute top-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
+                        <div className="absolute top-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-r-4 border-white rounded-tr-lg" />
+                        <div className="absolute bottom-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-l-4 border-white rounded-bl-lg" />
+                        <div className="absolute bottom-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-r-4 border-white rounded-br-lg" />
                       </div>
                     </div>
                   </div>
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                    <p className="text-white text-sm bg-black/50 px-3 py-1 rounded">
+                  <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 px-2">
+                    <p className="text-white text-xs sm:text-sm bg-black/50 px-2 sm:px-3 py-1 rounded text-center">
                       QRコードをスキャン枠内に合わせてください
                     </p>
                   </div>

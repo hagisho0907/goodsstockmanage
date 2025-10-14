@@ -54,12 +54,18 @@ export function Navigation({ currentPage, onNavigate, isMobileOpen }: Navigation
     <nav
       className={`
         fixed md:static inset-y-0 left-0 z-40 w-64
-        bg-white/90 border-r border-border/70 backdrop-blur-md shadow-sm
-        transform transition-transform duration-200 ease-in-out
+        bg-white/95 border-r border-border/70 backdrop-blur-md shadow-lg md:shadow-sm
+        transform transition-transform duration-300 ease-in-out
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        mobile-sidebar ${isMobileOpen ? 'open' : ''}
       `}
     >
-      <div className="p-4 space-y-2">
+      <div className="p-3 md:p-4 space-y-1 md:space-y-2 overflow-y-auto h-full">
+        {/* モバイル用のヘッダー */}
+        <div className="md:hidden pb-4 border-b border-border/30 mb-4">
+          <h2 className="font-semibold text-lg px-2">メニュー</h2>
+        </div>
+        
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
@@ -70,14 +76,15 @@ export function Navigation({ currentPage, onNavigate, isMobileOpen }: Navigation
               variant="ghost"
               className={`
                 w-full justify-start gap-3 rounded-lg border border-transparent
-                text-sm transition-all
+                text-sm md:text-sm transition-all mobile-button
+                min-h-[44px] px-3 py-2
                 hover:border-primary/30 hover:bg-primary/10 hover:text-primary
                 ${isActive ? 'bg-primary text-primary-foreground shadow-[0_6px_14px_rgba(37,99,235,0.18)] hover:bg-primary/90 hover:text-primary-foreground' : 'text-muted-foreground'}
               `}
               onClick={() => onNavigate(item.id)}
             >
-              <Icon className="h-5 w-5" />
-              {item.label}
+              <Icon className="h-5 w-5 shrink-0" />
+              <span className="truncate">{item.label}</span>
             </Button>
           );
         })}

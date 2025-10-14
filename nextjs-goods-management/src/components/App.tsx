@@ -110,7 +110,7 @@ export default function App() {
           />
         )}
         
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 mobile-padding">
           <div className="max-w-7xl mx-auto">
             {renderPage()}
           </div>

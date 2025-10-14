@@ -30,97 +30,99 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/90 backdrop-blur-md shadow-sm">
-      <div className="flex h-16 items-center gap-4 px-4">
+    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-white/95 backdrop-blur-md shadow-sm">
+      <div className="flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4 mobile-padding">
         <Button
           variant="ghost"
           size="icon"
           onClick={onMenuClick}
-          className="md:hidden"
+          className="md:hidden mobile-button min-w-[44px] min-h-[44px]"
         >
           <Menu className="h-5 w-5" />
         </Button>
 
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-[0_6px_14px_rgba(37,99,235,0.28)]">
-            <span className="text-primary-foreground font-semibold">IP</span>
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-primary flex items-center justify-center shadow-[0_6px_14px_rgba(37,99,235,0.28)] shrink-0">
+            <span className="text-primary-foreground font-semibold text-sm sm:text-base">IP</span>
           </div>
-          <div>
-            <h1 className="text-lg md:text-xl font-semibold text-foreground">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base sm:text-lg md:text-xl font-semibold text-foreground mobile-title truncate">
               グッズ在庫管理システム
             </h1>
-            <p className="text-xs text-muted-foreground hidden sm:block">
+            <p className="text-xs text-muted-foreground hidden sm:block truncate">
               IPグッズの在庫状況をリアルタイムに可視化
             </p>
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative text-muted-foreground">
+              <Button variant="ghost" size="icon" className="relative text-muted-foreground mobile-button min-w-[44px] min-h-[44px]">
                 <Bell className="h-5 w-5" />
                 {notificationCount > 0 && (
                   <Badge
                     variant="destructive"
-                    className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+                    className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-xs"
                   >
-                    {notificationCount}
+                    {notificationCount > 9 ? '9+' : notificationCount}
                   </Badge>
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuContent align="end" className="w-72 sm:w-80 max-w-[calc(100vw-2rem)]">
               <div className="p-2">
-                <h3 className="px-2 py-1.5">通知</h3>
+                <h3 className="px-2 py-1.5 font-medium">通知</h3>
                 <DropdownMenuSeparator />
-                {alerts.length > 0 ? (
-                  alerts.map((alert) => (
-                    <DropdownMenuItem
-                      key={alert.id}
-                      className={`p-3 cursor-pointer ${
-                        alert.severity === 'error' ? 'hover:bg-red-50' : 'hover:bg-yellow-50'
-                      }`}
-                      onClick={() => {
-                        if (alert.productId && onNavigate) {
-                          onNavigate('product-detail', alert.productId);
-                        }
-                      }}
-                    >
-                      <div className="flex gap-3 w-full">
-                        {alert.severity === 'error' ? (
-                          <XCircle className="h-5 w-5 text-[#EF4444] flex-shrink-0 mt-0.5" />
-                        ) : (
-                          <AlertTriangle className="h-5 w-5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm break-words">{alert.message}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(alert.createdAt).toLocaleString('ja-JP', {
-                              month: 'numeric',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </p>
+                <div className="max-h-64 sm:max-h-80 overflow-y-auto">
+                  {alerts.length > 0 ? (
+                    alerts.map((alert) => (
+                      <DropdownMenuItem
+                        key={alert.id}
+                        className={`p-3 cursor-pointer ${
+                          alert.severity === 'error' ? 'hover:bg-red-50' : 'hover:bg-yellow-50'
+                        }`}
+                        onClick={() => {
+                          if (alert.productId && onNavigate) {
+                            onNavigate('product-detail', alert.productId);
+                          }
+                        }}
+                      >
+                        <div className="flex gap-3 w-full">
+                          {alert.severity === 'error' ? (
+                            <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-[#EF4444] flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs sm:text-sm break-words">{alert.message}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(alert.createdAt).toLocaleString('ja-JP', {
+                                month: 'numeric',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    新しい通知はありません
-                  </div>
-                )}
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      新しい通知はありません
+                    </div>
+                  )}
+                </div>
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
-                <User className="h-5 w-5" />
-                <span className="hidden md:inline">{user?.name || 'ゲスト'}</span>
+              <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground mobile-button min-h-[44px] px-2 sm:px-3">
+                <User className="h-5 w-5 shrink-0" />
+                <span className="hidden sm:inline truncate max-w-20 md:max-w-none">{user?.name || 'ゲスト'}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

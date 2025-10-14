@@ -70,23 +70,23 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl mobile-spacing">
       {/* Header */}
-      <h1>入出庫</h1>
+      <h1 className="mobile-title">入出庫</h1>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'in' | 'out')}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="in">入庫</TabsTrigger>
-          <TabsTrigger value="out">出庫</TabsTrigger>
+        <TabsList className="grid w-full max-w-md grid-cols-2 mobile-spacing">
+          <TabsTrigger value="in" className="mobile-button">入庫</TabsTrigger>
+          <TabsTrigger value="out" className="mobile-button">出庫</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-6 mt-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <TabsContent value={activeTab} className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 mobile-spacing">
             {/* Scan Mode */}
             <Card>
-              <CardContent className="pt-6">
-                <Label>スキャンモード</Label>
-                <div className="mt-3 space-y-4">
+              <CardContent className="pt-4 sm:pt-6">
+                <Label className="text-sm sm:text-base">スキャンモード</Label>
+                <div className="mt-3 space-y-4 mobile-spacing">
                   {showScanner ? (
                     <div className="border rounded-lg overflow-hidden">
                       <QRCodeScanner 
@@ -94,12 +94,12 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                         mode={activeTab === 'in' ? 'stock-in' : 'stock-out'}
                         onProductDetected={handleProductDetected}
                       />
-                      <div className="p-4 border-t bg-gray-50">
+                      <div className="p-3 sm:p-4 border-t bg-gray-50">
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setShowScanner(false)}
-                          className="w-full"
+                          className="w-full mobile-button"
                         >
                           スキャンを終了
                         </Button>
@@ -107,41 +107,42 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                     </div>
                   ) : (
                     <>
-                      <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center min-h-[200px] bg-gray-50">
+                      <div className="border-2 border-dashed rounded-lg p-4 sm:p-8 flex flex-col items-center justify-center min-h-[180px] sm:min-h-[200px] bg-gray-50">
                         <div className="text-center">
-                          <ArrowRightLeft className={`h-16 w-16 mx-auto mb-4 ${
+                          <ArrowRightLeft className={`h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 ${
                             activeTab === 'in' ? 'text-[#10B981]' : 'text-[#2563EB]'
                           }`} />
-                          <p className="text-lg mb-4">
+                          <p className="text-sm sm:text-lg mb-3 sm:mb-4 px-2">
                             {activeTab === 'in' ? '入庫する' : '出庫する'}商品のQRコードをスキャン
                           </p>
                           <Button
                             type="button"
                             onClick={() => setShowScanner(true)}
-                            className={`${
+                            className={`mobile-button ${
                               activeTab === 'in' 
                                 ? 'bg-[#10B981] hover:bg-[#059669]' 
                                 : 'bg-[#2563EB] hover:bg-[#1d4ed8]'
                             }`}
                           >
                             <Camera className="h-4 w-4 mr-2" />
-                            QRスキャン開始
+                            <span className="text-sm sm:text-base">QRスキャン開始</span>
                           </Button>
                         </div>
                       </div>
 
-                      <div className="text-center text-muted-foreground">または</div>
+                      <div className="text-center text-muted-foreground text-sm">または</div>
 
                       <div>
-                        <Label htmlFor="manualSearch">手動入力</Label>
-                        <div className="flex gap-2 mt-2">
+                        <Label htmlFor="manualSearch" className="text-sm sm:text-base">手動入力</Label>
+                        <div className="flex flex-col sm:flex-row gap-2 mt-2 mobile-form">
                           <Input
                             id="manualSearch"
                             placeholder="SKU/商品名を入力"
                             className="flex-1"
                           />
-                          <Button type="button" variant="outline">
-                            <Search className="h-4 w-4" />
+                          <Button type="button" variant="outline" className="mobile-button">
+                            <Search className="h-4 w-4 sm:mr-2" />
+                            <span className="hidden sm:inline">検索</span>
                           </Button>
                         </div>
                       </div>
@@ -289,11 +290,11 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
             </Card>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 mobile-form">
               <Button
                 type="submit"
                 disabled={scannedProducts.length === 0}
-                className="bg-[#10B981] hover:bg-[#059669]"
+                className="bg-[#10B981] hover:bg-[#059669] mobile-button order-1 sm:order-none"
               >
                 <Save className="h-4 w-4 mr-2" />
                 確定処理
@@ -302,6 +303,7 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                 type="button"
                 variant="outline"
                 onClick={() => onNavigate('dashboard')}
+                className="mobile-button order-2 sm:order-none"
               >
                 キャンセル
               </Button>
