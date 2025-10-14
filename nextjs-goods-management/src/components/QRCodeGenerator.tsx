@@ -1,367 +1,342 @@
 'use client';
 
-import { useState } from 'react';
-import { Product } from '../types';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { useState, useRef } from 'react';
+import QRCode from 'qrcode';
+import QRCodeDisplay from 'react-qr-code';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Textarea } from './ui/textarea';
+import { Switch } from './ui/switch';
 import { Separator } from './ui/separator';
 import { toast } from 'sonner';
-import { QrCode, Download, Printer, Copy } from 'lucide-react';
+import { QrCode, Download, Printer, RefreshCw, Copy } from 'lucide-react';
+import { products } from '../lib/mockData';
+import { Product } from '../types';
 
 interface QRCodeGeneratorProps {
-  product: Product;
-  isOpen: boolean;
-  onClose: () => void;
+  onNavigate: (page: string, id?: string) => void;
+  productId?: string;
 }
 
-export function QRCodeGenerator({ product, isOpen, onClose }: QRCodeGeneratorProps) {
-  const [qrCodeSize, setQrCodeSize] = useState('medium');
-  const [includeText, setIncludeText] = useState(true);
+export function QRCodeGenerator({ onNavigate, productId }: QRCodeGeneratorProps) {
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(
+    productId ? products.find(p => p.id === productId) || null : null
+  );
+  const [qrCodeData, setQrCodeData] = useState('');
+  const [includeDetails, setIncludeDetails] = useState({
+    name: true,
+    jan: true,
+    category: true,
+    location: true,
+    price: false,
+    quantity: false,
+    expiryDate: false
+  });
+  const [customText, setCustomText] = useState('');
+  const [qrSize, setQrSize] = useState('256');
 
-  // QRコードデータの生成
   const generateQRData = () => {
-    return JSON.stringify({
-      id: product.id,
-      sku: product.sku,
-      name: product.name,
-      type: 'product',
-      timestamp: new Date().toISOString(),
-    });
-  };
-
-  // QRコードSVGの生成（シンプルな実装）
-  const generateQRCodeSVG = (data: string, size: number) => {
-    // 実際の実装では qrcode.js などのライブラリを使用
-    // ここではプレースホルダーとしてシンプルなSVGを返す
-    const qrData = generateQRData();
-    const cellSize = size / 25; // 25x25 grid
-    
-    // シンプルなパターン生成（実際はQRコードアルゴリズムを使用）
-    const pattern = Array(25).fill(0).map((_, i) => 
-      Array(25).fill(0).map((_, j) => 
-        Math.random() > 0.5 ? 1 : 0
-      )
-    );
-
-    const cells = pattern.map((row, i) => 
-      row.map((cell, j) => 
-        cell ? `<rect x="${j * cellSize}" y="${i * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>` : ''
-      ).join('')
-    ).join('');
-
-    return `
-      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="${size}" height="${size}" fill="white"/>
-        ${cells}
-      </svg>
-    `;
-  };
-
-  const getSizePixels = (size: string) => {
-    switch (size) {
-      case 'small': return 150;
-      case 'medium': return 200;
-      case 'large': return 300;
-      case 'xlarge': return 400;
-      default: return 200;
+    if (!selectedProduct) {
+      toast.error('物品を選択してください');
+      return;
     }
-  };
 
-  const handleCopyData = () => {
-    const qrData = generateQRData();
-    navigator.clipboard.writeText(qrData);
-    toast.success('QRコードデータをコピーしました');
-  };
-
-  const handleDownloadSVG = () => {
-    const size = getSizePixels(qrCodeSize);
-    const svg = generateQRCodeSVG(generateQRData(), size);
-    const blob = new Blob([svg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `qrcode-${product.sku}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success('QRコードをダウンロードしました');
-  };
-
-  const handleDownloadPNG = () => {
-    const size = getSizePixels(qrCodeSize);
-    const svg = generateQRCodeSVG(generateQRData(), size);
-    
-    // SVGをPNGに変換
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    canvas.width = size;
-    canvas.height = includeText ? size + 60 : size;
-    
-    const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-    
-    img.onload = () => {
-      if (ctx) {
-        // 背景を白で塗りつぶし
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // QRコードを描画
-        ctx.drawImage(img, 0, 0, size, size);
-        
-        // テキストを追加
-        if (includeText) {
-          ctx.fillStyle = 'black';
-          ctx.font = '14px Arial';
-          ctx.textAlign = 'center';
-          ctx.fillText(product.sku, size / 2, size + 20);
-          ctx.fillText(product.name, size / 2, size + 40);
-        }
-        
-        // PNGとしてダウンロード
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const pngUrl = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = pngUrl;
-            a.download = `qrcode-${product.sku}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(pngUrl);
-            toast.success('QRコードをダウンロードしました');
-          }
-        }, 'image/png');
-      }
-      URL.revokeObjectURL(url);
+    const data: Record<string, any> = {
+      id: selectedProduct.id,
+      type: 'product'
     };
-    
-    img.src = url;
+
+    if (includeDetails.name) data.name = selectedProduct.name;
+    if (includeDetails.jan) data.jan = selectedProduct.janCode;
+    if (includeDetails.category) data.category = selectedProduct.category;
+    if (includeDetails.location) data.location = selectedProduct.storageLocation;
+    if (includeDetails.price) data.price = selectedProduct.unitPrice;
+    if (includeDetails.quantity) data.quantity = selectedProduct.totalStock;
+    if (includeDetails.expiryDate) data.expiryDate = selectedProduct.sellByDate;
+
+    if (customText) {
+      data.custom = customText;
+    }
+
+    const jsonData = JSON.stringify(data);
+    setQrCodeData(jsonData);
+    toast.success('QRコードを生成しました');
   };
 
-  const handlePrint = () => {
-    const size = getSizePixels(qrCodeSize);
-    const svg = generateQRCodeSVG(generateQRData(), size);
-    
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>QRコード印刷 - ${product.sku}</title>
-            <style>
-              body {
-                margin: 0;
-                padding: 20px;
-                font-family: Arial, sans-serif;
-                text-align: center;
-              }
-              .qrcode-container {
-                display: inline-block;
-                border: 1px solid #ccc;
-                padding: 20px;
-                margin: 10px;
-              }
-              .product-info {
-                margin-top: 10px;
-                font-size: 14px;
-              }
-              .sku {
-                font-weight: bold;
-                font-size: 16px;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="qrcode-container">
-              ${svg}
-              ${includeText ? `
-                <div class="product-info">
-                  <div class="sku">${product.sku}</div>
-                  <div>${product.name}</div>
-                </div>
-              ` : ''}
-            </div>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
-      printWindow.close();
+  const downloadQRCode = async () => {
+    if (!qrCodeData) {
+      toast.error('先にQRコードを生成してください');
+      return;
     }
-    
-    toast.success('印刷ダイアログを開きました');
+
+    try {
+      const dataUrl = await QRCode.toDataURL(qrCodeData, {
+        width: parseInt(qrSize),
+        margin: 2
+      });
+
+      const link = document.createElement('a');
+      link.download = `qr-${selectedProduct?.janCode || 'custom'}-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      toast.success('QRコードをダウンロードしました');
+    } catch (error) {
+      toast.error('ダウンロードに失敗しました');
+    }
+  };
+
+  const copyQRData = () => {
+    if (!qrCodeData) {
+      toast.error('先にQRコードを生成してください');
+      return;
+    }
+
+    navigator.clipboard.writeText(qrCodeData);
+    toast.success('QRデータをクリップボードにコピーしました');
+  };
+
+  const printQRCode = () => {
+    if (!qrCodeData) {
+      toast.error('先にQRコードを生成してください');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('ポップアップがブロックされています');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>QRコード印刷</title>
+        <style>
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+          body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+          }
+          .qr-container {
+            text-align: center;
+            margin-bottom: 20px;
+          }
+          .product-info {
+            margin-top: 10px;
+            font-size: 14px;
+          }
+          button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="qr-container">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="${qrSize}" height="${qrSize}">
+            ${document.querySelector('#qr-code-display svg')?.innerHTML}
+          </svg>
+          ${selectedProduct ? `
+            <div class="product-info">
+              <strong>${selectedProduct.name}</strong><br>
+              JAN: ${selectedProduct.janCode}
+            </div>
+          ` : ''}
+        </div>
+        <button class="no-print" onclick="window.print()">印刷</button>
+        <button class="no-print" onclick="window.close()">閉じる</button>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <QrCode className="w-5 h-5" />
-            QRコード生成
-          </DialogTitle>
-          <DialogDescription>
-            商品「{product.name}」のQRコードを生成・印刷できます
-          </DialogDescription>
-        </DialogHeader>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <QrCode className="w-8 h-8" />
+          QRコード生成
+        </h1>
+        <p className="text-muted-foreground mt-1">物品情報のQRコードを生成・印刷します</p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 設定パネル */}
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">QRコード設定</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">サイズ</label>
-                  <Select value={qrCodeSize} onValueChange={setQrCodeSize}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="small">小 (150px)</SelectItem>
-                      <SelectItem value="medium">中 (200px)</SelectItem>
-                      <SelectItem value="large">大 (300px)</SelectItem>
-                      <SelectItem value="xlarge">特大 (400px)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>QRコード設定</CardTitle>
+            <CardDescription>
+              生成するQRコードの内容を設定します
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>物品選択</Label>
+              <Select
+                value={selectedProduct?.id || ''}
+                onValueChange={(value) => {
+                  const product = products.find(p => p.id === value);
+                  setSelectedProduct(product || null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="物品を選択してください" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map(product => (
+                    <SelectItem key={product.id} value={product.id}>
+                      <div className="flex flex-col">
+                        <span>{product.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          JAN: {product.janCode}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="includeText"
-                    checked={includeText}
-                    onChange={(e) => setIncludeText(e.target.checked)}
-                    className="rounded"
+            <Separator />
+
+            <div className="space-y-3">
+              <Label>含める情報</Label>
+              {Object.entries({
+                name: '商品名',
+                jan: 'JANコード',
+                category: 'カテゴリ',
+                location: '保管場所',
+                price: '単価',
+                quantity: '在庫数',
+                expiryDate: '販売期限'
+              }).map(([key, label]) => (
+                <div key={key} className="flex items-center justify-between">
+                  <Label htmlFor={key} className="font-normal">
+                    {label}
+                  </Label>
+                  <Switch
+                    id={key}
+                    checked={includeDetails[key as keyof typeof includeDetails]}
+                    onCheckedChange={(checked) => 
+                      setIncludeDetails(prev => ({ ...prev, [key]: checked }))
+                    }
                   />
-                  <label htmlFor="includeText" className="text-sm font-medium">
-                    商品情報を含める
-                  </label>
                 </div>
-              </CardContent>
-            </Card>
+              ))}
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">商品情報</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <span className="text-sm font-medium">SKU: </span>
-                  <span className="text-sm">{product.sku}</span>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">商品名: </span>
-                  <span className="text-sm">{product.name}</span>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">カテゴリ: </span>
-                  <span className="text-sm">{product.categoryName}</span>
-                </div>
-                <div>
-                  <span className="text-sm font-medium">保管場所: </span>
-                  <span className="text-sm">{product.storageLocationName}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* プレビューパネル */}
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">プレビュー</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col items-center space-y-4">
-                <div className="border-2 border-dashed border-gray-300 p-4 rounded-lg">
-                  <div 
-                    dangerouslySetInnerHTML={{ 
-                      __html: generateQRCodeSVG(generateQRData(), getSizePixels(qrCodeSize)) 
-                    }}
-                    className="flex justify-center"
-                  />
-                  {includeText && (
-                    <div className="text-center mt-2 space-y-1">
-                      <div className="font-bold text-sm">{product.sku}</div>
-                      <div className="text-xs text-muted-foreground">{product.name}</div>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="text-xs text-muted-foreground text-center">
-                  サイズ: {getSizePixels(qrCodeSize)}px × {getSizePixels(qrCodeSize)}px
-                </div>
-              </CardContent>
-            </Card>
+            <Separator />
 
             <div className="space-y-2">
-              <Button 
-                onClick={handlePrint}
-                className="w-full"
-                variant="default"
-              >
-                <Printer className="w-4 h-4 mr-2" />
-                印刷
-              </Button>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  onClick={handleDownloadPNG}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  PNG
-                </Button>
-                <Button 
-                  onClick={handleDownloadSVG}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Download className="w-4 h-4 mr-1" />
-                  SVG
-                </Button>
-              </div>
-              
-              <Button 
-                onClick={handleCopyData}
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                データをコピー
-              </Button>
+              <Label htmlFor="custom-text">カスタムテキスト（任意）</Label>
+              <Textarea
+                id="custom-text"
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value)}
+                placeholder="追加情報を入力..."
+                rows={3}
+              />
             </div>
-          </div>
-        </div>
 
-        <Separator />
+            <div className="space-y-2">
+              <Label htmlFor="qr-size">QRコードサイズ</Label>
+              <Select value={qrSize} onValueChange={setQrSize}>
+                <SelectTrigger id="qr-size">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="128">小（128px）</SelectItem>
+                  <SelectItem value="256">中（256px）</SelectItem>
+                  <SelectItem value="512">大（512px）</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">QRコードに含まれるデータ:</h4>
-          <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-            {JSON.stringify(JSON.parse(generateQRData()), null, 2)}
-          </pre>
-        </div>
+            <Button 
+              onClick={generateQRData} 
+              className="w-full"
+              disabled={!selectedProduct}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              QRコード生成
+            </Button>
+          </CardContent>
+        </Card>
 
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={onClose}>
-            閉じる
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        <Card>
+          <CardHeader>
+            <CardTitle>QRコードプレビュー</CardTitle>
+            <CardDescription>
+              生成されたQRコードが表示されます
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {qrCodeData ? (
+              <>
+                <div className="flex justify-center p-4 bg-white rounded-lg border" id="qr-code-display">
+                  <QRCodeDisplay
+                    value={qrCodeData}
+                    size={parseInt(qrSize)}
+                    level="M"
+                  />
+                </div>
+
+                {selectedProduct && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="font-medium">{selectedProduct.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      JAN: {selectedProduct.janCode}
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button onClick={downloadQRCode} variant="outline">
+                    <Download className="w-4 h-4 mr-2" />
+                    ダウンロード
+                  </Button>
+                  <Button onClick={printQRCode} variant="outline">
+                    <Printer className="w-4 h-4 mr-2" />
+                    印刷
+                  </Button>
+                  <Button 
+                    onClick={copyQRData} 
+                    variant="outline" 
+                    className="col-span-2"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    データをコピー
+                  </Button>
+                </div>
+
+                <div className="mt-4">
+                  <Label className="text-xs">QRコードデータ:</Label>
+                  <pre className="mt-1 p-2 bg-gray-100 rounded text-xs overflow-x-auto">
+                    {JSON.stringify(JSON.parse(qrCodeData), null, 2)}
+                  </pre>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <QrCode className="w-16 h-16 mb-4" />
+                <p>QRコードを生成してください</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }

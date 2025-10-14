@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { QrReader } from 'react-qr-reader';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -51,13 +50,66 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
     data: ScanResult;
     product?: Product;
   }>>([]);
+  const [hasCamera, setHasCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const handleScan = (result: any) => {
-    if (!result) return;
+  // カメラの利用可能性をチェック
+  useEffect(() => {
+    const checkCamera = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        setHasCamera(videoDevices.length > 0);
+      } catch (error) {
+        console.error('Camera check failed:', error);
+        setHasCamera(false);
+      }
+    };
 
+    if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+      checkCamera();
+    }
+  }, []);
+
+  const startCamera = async () => {
     try {
-      const data = JSON.parse(result.text) as ScanResult;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
+      });
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+        setIsScanning(true);
+        toast.success('カメラを起動しました');
+      }
+    } catch (error) {
+      console.error('Camera access failed:', error);
+      toast.error('カメラへのアクセスに失敗しました');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsScanning(false);
+    toast.info('カメラを停止しました');
+  };
+
+  const handleScan = useCallback((result: string) => {
+    try {
+      const data = JSON.parse(result) as ScanResult;
       
       if (data.type !== 'product' || !data.id) {
         toast.error('無効なQRコードです');
@@ -85,7 +137,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
         toast.success(`商品を検出: ${product.name}`);
 
         if (!continuousMode) {
-          setIsScanning(false);
+          stopCamera();
         }
 
         // モードに応じた処理
@@ -115,13 +167,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
     } catch (error) {
       toast.error('QRコードの読み取りに失敗しました');
     }
-  };
-
-  const handleError = (error: any) => {
-    console.error('QR Scanner Error:', error);
-    toast.error('カメラへのアクセスに失敗しました');
-    setIsScanning(false);
-  };
+  }, [continuousMode, mode, onNavigate]);
 
   const getModeInfo = () => {
     switch (mode) {
@@ -180,32 +226,43 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
                     />
                     <Label htmlFor="continuous">連続スキャン</Label>
                   </div>
-                  <Button
-                    onClick={() => setIsScanning(!isScanning)}
-                    variant={isScanning ? 'destructive' : 'default'}
-                  >
-                    {isScanning ? (
-                      <>
-                        <CameraOff className="w-4 h-4 mr-2" />
-                        スキャン停止
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="w-4 h-4 mr-2" />
-                        スキャン開始
-                      </>
-                    )}
-                  </Button>
+                  {hasCamera ? (
+                    <Button
+                      onClick={isScanning ? stopCamera : startCamera}
+                      variant={isScanning ? 'destructive' : 'default'}
+                    >
+                      {isScanning ? (
+                        <>
+                          <CameraOff className="w-4 h-4 mr-2" />
+                          スキャン停止
+                        </>
+                      ) : (
+                        <>
+                          <Camera className="w-4 h-4 mr-2" />
+                          スキャン開始
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Alert className="p-2">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        カメラが利用できません
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {isScanning ? (
                 <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                  <QrReader
-                    onResult={handleScan}
-                    constraints={{ facingMode: 'environment' }}
-                    className="w-full h-full"
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -217,13 +274,54 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
                       </div>
                     </div>
                   </div>
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                    <p className="text-white text-sm bg-black/50 px-3 py-1 rounded">
+                      QRコードをスキャン枠内に合わせてください
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-64 bg-gray-100 rounded-lg">
-                  <Camera className="w-16 h-16 text-gray-400 mb-4" />
-                  <p className="text-gray-500">
-                    「スキャン開始」をクリックしてカメラを起動してください
+                  {hasCamera ? (
+                    <>
+                      <Camera className="w-16 h-16 text-gray-400 mb-4" />
+                      <p className="text-gray-500">
+                        「スキャン開始」をクリックしてカメラを起動してください
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-16 h-16 text-gray-400 mb-4" />
+                      <p className="text-gray-500">
+                        カメラが利用できません
+                      </p>
+                      <p className="text-gray-400 text-sm mt-2">
+                        代わりに手動でQRコードデータを入力するか、<br />
+                        ファイルアップロード機能をご利用ください
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {!hasCamera && (
+                <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+                  <h3 className="font-medium text-blue-900">代替手段</h3>
+                  <p className="text-blue-800 text-sm">
+                    カメラスキャンが利用できない場合は、以下の方法をお試しください：
                   </p>
+                  <div className="space-y-2 text-sm text-blue-700">
+                    <div>• QRコード画像をアップロード</div>
+                    <div>• JANコードで手動検索</div>
+                    <div>• 物品一覧から選択</div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => onNavigate('products')}
+                    className="mt-2"
+                  >
+                    物品一覧へ
+                  </Button>
                 </div>
               )}
 
