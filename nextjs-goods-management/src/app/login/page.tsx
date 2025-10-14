@@ -39,7 +39,7 @@ export default function LoginPage() {
 
       if (isAuthenticated) {
         toast.success('ログインしました');
-        router.push('/');
+        router.replace('/');
       } else {
         toast.error('メールアドレスまたはパスワードが正しくありません');
       }

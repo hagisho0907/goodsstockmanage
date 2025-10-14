@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const checkAuth = () => {
+    setIsLoading(true);
     const token = localStorage.getItem('authToken');
     const userEmail = localStorage.getItem('userEmail');
     
@@ -55,11 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   };
 
-  const login = async (
-    email: string,
-    password: string,
-    remember = false,
-  ): Promise<boolean> => {
+  const login = async (email: string, password: string, remember = false): Promise<boolean> => {
+    setIsLoading(true);
     // TODO: 実際のAPI呼び出しに置き換える
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -80,12 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem('rememberMe');
         }
         setUser(userData);
+        setIsLoading(false);
         return true;
       }
       
+      setIsLoading(false);
       return false;
     } catch (error) {
       console.error('Login error:', error);
+      setIsLoading(false);
       return false;
     }
   };
