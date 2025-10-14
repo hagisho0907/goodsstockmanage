@@ -657,10 +657,10 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                         <SelectTrigger className="w-full sm:w-[200px]">
                           <SelectValue placeholder="カメラ選択" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="auto">自動選択</SelectItem>
+                        <SelectContent className="dropdown-content-enhanced">
+                          <SelectItem value="auto" className="dropdown-item-enhanced">自動選択</SelectItem>
                           {cameraDevices.map((device, index) => (
-                            <SelectItem key={device.deviceId} value={device.deviceId}>
+                            <SelectItem key={device.deviceId} value={device.deviceId} className="dropdown-item-enhanced">
                               {device.label || `カメラ${index + 1}`}
                             </SelectItem>
                           ))}

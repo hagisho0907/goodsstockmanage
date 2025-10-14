@@ -70,16 +70,16 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
                 )}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72 sm:w-80 max-w-[calc(100vw-2rem)]">
-              <div className="p-2">
-                <h3 className="px-2 py-1.5 font-medium">通知</h3>
+            <DropdownMenuContent align="end" className="w-72 sm:w-80 max-w-[calc(100vw-2rem)] notification-dropdown">
+              <div className="p-2 bg-white">
+                <h3 className="px-2 py-1.5 font-medium text-gray-900">通知</h3>
                 <DropdownMenuSeparator />
                 <div className="max-h-64 sm:max-h-80 overflow-y-auto">
                   {alerts.length > 0 ? (
                     alerts.map((alert) => (
                       <DropdownMenuItem
                         key={alert.id}
-                        className={`p-3 cursor-pointer ${
+                        className={`p-3 cursor-pointer dropdown-item-enhanced ${
                           alert.severity === 'error' ? 'hover:bg-red-50' : 'hover:bg-yellow-50'
                         }`}
                         onClick={() => {
@@ -109,7 +109,7 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
                       </DropdownMenuItem>
                     ))
                   ) : (
-                    <div className="p-4 text-center text-sm text-muted-foreground">
+                    <div className="p-4 text-center text-sm text-gray-600 bg-white">
                       新しい通知はありません
                     </div>
                   )}
@@ -125,29 +125,31 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
                 <span className="hidden sm:inline truncate max-w-20 md:max-w-none">{user?.name || 'ゲスト'}</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {user && (
-                <>
-                  <div className="px-3 py-2 text-sm">
-                    <div className="font-medium">{user.name}</div>
-                    <div className="text-muted-foreground">{user.email}</div>
-                    {user.department && (
-                      <div className="text-muted-foreground">{user.department}</div>
-                    )}
-                  </div>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem>プロフィール</DropdownMenuItem>
-              <DropdownMenuItem>設定</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                className="text-destructive cursor-pointer"
-                onClick={handleLogout}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                ログアウト
-              </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="user-dropdown">
+              <div className="bg-white">
+                {user && (
+                  <>
+                    <div className="px-3 py-2 text-sm bg-white">
+                      <div className="font-medium text-gray-900">{user.name}</div>
+                      <div className="text-gray-600">{user.email}</div>
+                      {user.department && (
+                        <div className="text-gray-600">{user.department}</div>
+                      )}
+                    </div>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem className="dropdown-item-enhanced bg-white text-gray-900">プロフィール</DropdownMenuItem>
+                <DropdownMenuItem className="dropdown-item-enhanced bg-white text-gray-900">設定</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive cursor-pointer dropdown-item-enhanced bg-white hover:bg-red-50"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  ログアウト
+                </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
