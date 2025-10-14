@@ -21,7 +21,6 @@ import {
   Camera, 
   CameraOff, 
   QrCode, 
-  Search, 
   Package, 
   ArrowRightLeft,
   AlertCircle,
@@ -97,247 +96,6 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     }
   }, []);
 
-  const updateCameraDevices = useCallback(async () => {
-    if (!navigator.mediaDevices?.enumerateDevices) {
-      setHasCamera(false);
-      setCameraDevices([]);
-      return;
-    }
-
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = devices.filter((device) => device.kind === 'videoinput');
-      const usableDevices = videoInputs.filter((device) => Boolean(device.deviceId));
-
-      setCameraDevices(usableDevices);
-      setHasCamera(videoInputs.length > 0);
-
-      if (!selectedCameraId) {
-        const preferredDevice =
-          usableDevices.find(
-            (device) =>
-              device.label &&
-              /back|environment|rear/i.test(device.label.toLowerCase()),
-          ) ?? usableDevices[0];
-
-        if (preferredDevice?.deviceId) {
-          setSelectedCameraId(preferredDevice.deviceId);
-        }
-      }
-    } catch (error) {
-      console.error('Camera enumeration failed:', error);
-      setHasCamera(false);
-      setCameraDevices([]);
-    }
-  }, [selectedCameraId]);
-
-  // カメラの利用可能性をチェック
-  useEffect(() => {
-    if (navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function') {
-      updateCameraDevices();
-    } else {
-      setHasCamera(false);
-    }
-  }, [updateCameraDevices]);
-
-  useEffect(() => {
-    if (!navigator.mediaDevices?.addEventListener) return;
-
-    const handleDeviceChange = () => {
-      updateCameraDevices();
-    };
-
-    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
-
-    return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
-    };
-  }, [updateCameraDevices]);
-
-  // コンポーネントアンマウント時のクリーンアップ
-  useEffect(() => {
-    return () => {
-      stopCamera({ silent: true });
-    };
-  }, [stopCamera]);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        stopCamera({ silent: true });
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [stopCamera]);
-
-  const startCamera = useCallback(
-    async (targetDeviceId?: string) => {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error('カメラAPIがサポートされていません');
-        return;
-      }
-
-      try {
-        stopCamera({ silent: true });
-        setIsRequestingCamera(true);
-
-        const selectedId = targetDeviceId ?? selectedCameraId;
-        const videoConstraints: MediaTrackConstraints = selectedId
-          ? { deviceId: { exact: selectedId } }
-          : {
-              facingMode: { ideal: 'environment' },
-              width: { ideal: 1280, max: 1920 },
-              height: { ideal: 720, max: 1080 },
-            };
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
-          audio: false,
-        });
-
-        await updateCameraDevices();
-
-        const videoElement = videoRef.current;
-        if (!videoElement) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        const [track] = stream.getVideoTracks();
-        const settings = track.getSettings();
-        if (!selectedId && settings.deviceId) {
-          setSelectedCameraId(settings.deviceId);
-        }
-
-        videoElement.srcObject = stream;
-        streamRef.current = stream;
-
-        // iOS向け属性セット
-        videoElement.setAttribute('playsinline', 'true');
-        videoElement.setAttribute('autoplay', 'true');
-        videoElement.setAttribute('muted', 'true');
-        videoElement.playsInline = true;
-        videoElement.autoplay = true;
-        videoElement.muted = true;
-
-        try {
-          await videoElement.play();
-          setIsScanning(true);
-          isScanningRef.current = true;
-          setPermissionStatus('granted');
-          startQRScan();
-          toast.success('カメラを起動しました');
-        } catch (playError) {
-          console.error('Video playback failed:', playError);
-          toast.error('カメラの再生がブロックされました。画面をタップしてから再試行してください。');
-        }
-      } catch (error) {
-        console.error('Camera access failed:', error);
-        setIsScanning(false);
-        isScanningRef.current = false;
-
-        let errorMessage = 'カメラへのアクセスに失敗しました';
-        if (error instanceof Error) {
-          if (error.name === 'NotAllowedError') {
-            errorMessage = 'カメラの使用許可が必要です。ブラウザの設定を確認してください';
-            setPermissionStatus('denied');
-          } else if (error.name === 'NotFoundError') {
-            errorMessage = 'カメラが見つかりません';
-          } else if (error.name === 'NotReadableError') {
-            errorMessage = 'カメラが他のアプリで使用中です';
-          } else if (error.name === 'NotSupportedError') {
-            errorMessage = 'HTTPS環境が必要です';
-          }
-        }
-
-        toast.error(errorMessage);
-      } finally {
-        setIsRequestingCamera(false);
-      }
-    },
-    [selectedCameraId, stopCamera, updateCameraDevices],
-  );
-
-  const handleSelectCamera = useCallback(
-    async (deviceId: string) => {
-      setSelectedCameraId(deviceId);
-
-      if (isRequestingCamera) {
-        return;
-      }
-
-      if (isScanningRef.current) {
-        await startCamera(deviceId);
-      }
-    },
-    [isRequestingCamera, startCamera],
-  );
-
-  const handleCycleCamera = useCallback(async () => {
-    if (cameraDevices.length <= 1) {
-      toast.info('切り替え可能なカメラが見つかりません');
-      return;
-    }
-
-    const currentIndex = cameraDevices.findIndex(
-      (device) => device.deviceId === selectedCameraId,
-    );
-    const nextDevice = cameraDevices[(currentIndex + 1) % cameraDevices.length];
-
-    if (nextDevice?.deviceId) {
-      await handleSelectCamera(nextDevice.deviceId);
-    } else {
-      await startCamera();
-    }
-  }, [cameraDevices, handleSelectCamera, selectedCameraId, startCamera]);
-
-  const handleCameraChange = useCallback(
-    async (value: string) => {
-      if (value === 'auto') {
-        setSelectedCameraId('');
-        if (isScanningRef.current && !isRequestingCamera) {
-          await startCamera();
-        }
-        return;
-      }
-
-      await handleSelectCamera(value);
-    },
-    [handleSelectCamera, isRequestingCamera, startCamera],
-  );
-
-  // リアルタイムQRコードスキャン機能
-  const startQRScan = () => {
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current);
-    }
-
-    scanIntervalRef.current = setInterval(() => {
-      if (videoRef.current && canvasRef.current && isScanningRef.current) {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-
-        if (video.readyState === video.HAVE_ENOUGH_DATA && ctx) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-          if (code && code.data) {
-            handleScan(code.data);
-          }
-        }
-      }
-    }, 300); // 300ms間隔でスキャン
-  };
-
   const handleScan = useCallback((result: string) => {
     try {
       const data = JSON.parse(result) as ScanResult;
@@ -402,6 +160,283 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     }
   }, [continuousMode, mode, onNavigate, onProductDetected, stopCamera]);
 
+  // リアルタイムQRコードスキャン機能
+  const startQRScan = useCallback(() => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+    }
+
+    scanIntervalRef.current = setInterval(() => {
+      if (videoRef.current && canvasRef.current && isScanningRef.current) {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA && ctx) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+          if (code && code.data) {
+            handleScan(code.data);
+          }
+        }
+      }
+    }, 300); // 300ms間隔でスキャン
+  }, [handleScan]);
+
+  const updateCameraDevices = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      setHasCamera(false);
+      setCameraDevices([]);
+      return;
+    }
+
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((device) => device.kind === 'videoinput');
+      const usableDevices = videoInputs.filter((device) => Boolean(device.deviceId));
+
+      setCameraDevices(usableDevices);
+      setHasCamera(videoInputs.length > 0);
+
+      if (!selectedCameraId) {
+        const preferredDevice =
+          usableDevices.find(
+            (device) =>
+              device.label &&
+              /back|environment|rear/i.test(device.label.toLowerCase()),
+          ) ?? usableDevices[0];
+
+        if (preferredDevice?.deviceId) {
+          setSelectedCameraId(preferredDevice.deviceId);
+        }
+      }
+    } catch (error) {
+      console.error('Camera enumeration failed:', error);
+      setHasCamera(false);
+      setCameraDevices([]);
+    }
+  }, [selectedCameraId]);
+
+  // カメラの利用可能性をチェック
+  useEffect(() => {
+    // HTTPSチェック
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      console.warn('カメラアクセスにはHTTPS環境が必要です');
+      toast.warning('カメラを使用するにはHTTPS環境が必要です');
+    }
+
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.enumerateDevices === 'function') {
+      updateCameraDevices();
+    } else {
+      setHasCamera(false);
+      console.error('navigator.mediaDevices APIが利用できません');
+    }
+  }, [updateCameraDevices]);
+
+  useEffect(() => {
+    if (!navigator.mediaDevices?.addEventListener) return;
+
+    const handleDeviceChange = () => {
+      updateCameraDevices();
+    };
+
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+    };
+  }, [updateCameraDevices]);
+
+  // コンポーネントアンマウント時のクリーンアップ
+  useEffect(() => {
+    return () => {
+      stopCamera({ silent: true });
+    };
+  }, [stopCamera]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        stopCamera({ silent: true });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [stopCamera]);
+
+  const startCamera = useCallback(
+    async (targetDeviceId?: string) => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error('カメラAPIがサポートされていません');
+        console.error('navigator.mediaDevices.getUserMedia is not available');
+        return;
+      }
+
+      try {
+        stopCamera({ silent: true });
+        setIsRequestingCamera(true);
+
+        // iOS向けの処理
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        const isSafari = /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent);
+        
+        if (isIOS && isSafari) {
+          console.log('iOS Safari detected - using special handling');
+        }
+
+        const selectedId = targetDeviceId ?? selectedCameraId;
+        const videoConstraints: MediaTrackConstraints = selectedId
+          ? { deviceId: { exact: selectedId } }
+          : {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280, max: 1920 },
+              height: { ideal: 720, max: 1080 },
+            };
+
+        console.log('Requesting camera with constraints:', videoConstraints);
+
+        let stream: MediaStream;
+        
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: false,
+          });
+        } catch (firstError) {
+          console.error('First camera access attempt failed:', firstError);
+          
+          // フォールバック：より単純な制約で再試行
+          if (!selectedId) {
+            console.log('Retrying with simplified constraints...');
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false,
+            });
+          } else {
+            throw firstError;
+          }
+        }
+
+        await updateCameraDevices();
+
+        const videoElement = videoRef.current;
+        if (!videoElement) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        const [track] = stream.getVideoTracks();
+        const settings = track.getSettings();
+        if (!selectedId && settings.deviceId) {
+          setSelectedCameraId(settings.deviceId);
+        }
+
+        videoElement.srcObject = stream;
+        streamRef.current = stream;
+
+        // iOS向け属性セット
+        videoElement.setAttribute('playsinline', 'true');
+        videoElement.setAttribute('autoplay', 'true');
+        videoElement.setAttribute('muted', 'true');
+        videoElement.playsInline = true;
+        videoElement.autoplay = true;
+        videoElement.muted = true;
+
+        try {
+          await videoElement.play();
+          setIsScanning(true);
+          isScanningRef.current = true;
+          setPermissionStatus('granted');
+          startQRScan();
+          toast.success('カメラを起動しました');
+        } catch (playError) {
+          console.error('Video playback failed:', playError);
+          toast.error('カメラの再生がブロックされました。画面をタップしてから再試行してください。');
+        }
+      } catch (error) {
+        console.error('Camera access failed:', error);
+        setIsScanning(false);
+        isScanningRef.current = false;
+
+        let errorMessage = 'カメラへのアクセスに失敗しました';
+        if (error instanceof Error) {
+          if (error.name === 'NotAllowedError') {
+            errorMessage = 'カメラの使用許可が必要です。ブラウザの設定を確認してください';
+            setPermissionStatus('denied');
+          } else if (error.name === 'NotFoundError') {
+            errorMessage = 'カメラが見つかりません';
+          } else if (error.name === 'NotReadableError') {
+            errorMessage = 'カメラが他のアプリで使用中です';
+          } else if (error.name === 'NotSupportedError') {
+            errorMessage = 'HTTPS環境が必要です';
+          }
+        }
+
+        toast.error(errorMessage);
+      } finally {
+        setIsRequestingCamera(false);
+      }
+    },
+    [selectedCameraId, stopCamera, updateCameraDevices, startQRScan],
+  );
+
+  const handleSelectCamera = useCallback(
+    async (deviceId: string) => {
+      setSelectedCameraId(deviceId);
+
+      if (isRequestingCamera) {
+        return;
+      }
+
+      if (isScanningRef.current) {
+        await startCamera(deviceId);
+      }
+    },
+    [isRequestingCamera, startCamera],
+  );
+
+  const handleCycleCamera = useCallback(async () => {
+    if (cameraDevices.length <= 1) {
+      toast.info('切り替え可能なカメラが見つかりません');
+      return;
+    }
+
+    const currentIndex = cameraDevices.findIndex(
+      (device) => device.deviceId === selectedCameraId,
+    );
+    const nextDevice = cameraDevices[(currentIndex + 1) % cameraDevices.length];
+
+    if (nextDevice?.deviceId) {
+      await handleSelectCamera(nextDevice.deviceId);
+    } else {
+      await startCamera();
+    }
+  }, [cameraDevices, handleSelectCamera, selectedCameraId, startCamera]);
+
+  const handleCameraChange = useCallback(
+    async (value: string) => {
+      if (value === 'auto') {
+        setSelectedCameraId('');
+        if (isScanningRef.current && !isRequestingCamera) {
+          await startCamera();
+        }
+        return;
+      }
+
+      await handleSelectCamera(value);
+    },
+    [handleSelectCamera, isRequestingCamera, startCamera],
+  );
+
+
   // 画像ファイルからQRコードを読み取る
   const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -435,13 +470,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
           const code = jsQR(imageData.data, imageData.width, imageData.height);
           
           if (code) {
-            try {
-              const qrData = JSON.parse(code.data);
-              handleScan(qrData);
-              toast.success('QRコードを検出しました');
-            } catch (error) {
-              toast.error('QRコードの形式が正しくありません');
-            }
+            handleScan(code.data);
           } else {
             toast.error('QRコードが見つかりませんでした');
           }
@@ -662,14 +691,23 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
               {!hasCamera && (
                 <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
-                  <h3 className="font-medium text-blue-900">代替手段</h3>
-                  <p className="text-blue-800 text-sm">
-                    カメラスキャンが利用できない場合は、以下の方法をお試しください：
-                  </p>
-                  <div className="space-y-2 text-sm text-blue-700">
-                    <div>• QRコード画像をアップロード</div>
-                    <div>• JANコードで手動検索</div>
-                    <div>• 物品一覧から選択</div>
+                  <h3 className="font-medium text-blue-900">カメラが利用できません</h3>
+                  <div className="text-blue-800 text-sm space-y-2">
+                    <p>以下の理由が考えられます：</p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li>HTTPS環境でない（HTTPSが必要です）</li>
+                      <li>カメラへのアクセス許可がない</li>
+                      <li>他のアプリがカメラを使用中</li>
+                      <li>デバイスにカメラが接続されていない</li>
+                    </ul>
+                  </div>
+                  <div className="border-t border-blue-200 pt-4">
+                    <p className="text-blue-800 text-sm font-medium mb-2">代替手段：</p>
+                    <div className="space-y-2 text-sm text-blue-700">
+                      <div>• 「画像アップロード」タブでQRコード画像を読み取る</div>
+                      <div>• JANコードで手動検索</div>
+                      <div>• 物品一覧から選択</div>
+                    </div>
                   </div>
                   <Button 
                     variant="outline" 
