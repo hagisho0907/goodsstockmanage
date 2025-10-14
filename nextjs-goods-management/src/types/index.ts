@@ -16,6 +16,7 @@ export interface Product {
   usedStockImages?: string[];    // 中古品の写真
   damagedStockImages?: string[]; // 破損品の写真
   imageUrl?: string;
+  qrCode?: string; // QRコードのデータURL
   salesEndDate?: string;
   ipInfo?: {
     productionQuantity?: number;
