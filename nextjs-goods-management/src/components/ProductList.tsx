@@ -19,7 +19,7 @@ import {
   TableRow,
 } from './ui/table';
 import { Checkbox } from './ui/checkbox';
-import { products, categories, storageLocations } from '../lib/mockData';
+import { dataStore, categories, storageLocations } from '../lib/dataStore';
 
 interface ProductListProps {
   onNavigate: (page: string, productId?: string) => void;
@@ -29,6 +29,12 @@ export function ProductList({ onNavigate }: ProductListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [products, setProducts] = useState(() => dataStore.getProducts());
+
+  // データ更新の監視（リアルタイム更新）
+  const refreshProducts = () => {
+    setProducts(dataStore.getProducts());
+  };
 
   const getExpiryStatus = (salesEndDate?: string) => {
     if (!salesEndDate) return 'ok';
