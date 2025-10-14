@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import jsQR from 'jsqr';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -17,9 +18,11 @@ import {
   Package, 
   ArrowRightLeft,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
-import { products } from '../lib/mockData';
+import { dataStore } from '../lib/dataStore';
 import { Product } from '../types';
 
 interface QRCodeScannerProps {
@@ -51,9 +54,12 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
     product?: Product;
   }>>([]);
   const [hasCamera, setHasCamera] = useState(false);
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // カメラの利用可能性をチェック
   useEffect(() => {
@@ -116,6 +122,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
         return;
       }
 
+      const products = dataStore.getProducts();
       const product = products.find(p => p.id === data.id);
       
       if (product) {
@@ -169,6 +176,81 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
     }
   }, [continuousMode, mode, onNavigate]);
 
+  // 画像ファイルからQRコードを読み取る
+  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const imageSrc = e.target?.result as string;
+      setUploadedImage(imageSrc);
+      setIsProcessingImage(true);
+
+      try {
+        // 画像をCanvasに描画してImageDataを取得
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            toast.error('画像の処理に失敗しました');
+            setIsProcessingImage(false);
+            return;
+          }
+
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          
+          // jsQRでQRコードを検出
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          
+          if (code) {
+            try {
+              const qrData = JSON.parse(code.data);
+              handleScan(qrData);
+              toast.success('QRコードを検出しました');
+            } catch (error) {
+              toast.error('QRコードの形式が正しくありません');
+            }
+          } else {
+            toast.error('QRコードが見つかりませんでした');
+          }
+          
+          setIsProcessingImage(false);
+        };
+        
+        img.onerror = () => {
+          toast.error('画像の読み込みに失敗しました');
+          setIsProcessingImage(false);
+        };
+        
+        img.src = imageSrc;
+      } catch (error) {
+        toast.error('画像の処理中にエラーが発生しました');
+        setIsProcessingImage(false);
+      }
+    };
+    
+    reader.readAsDataURL(file);
+  }, [handleScan]);
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
+  };
+
+  const clearUploadedImage = () => {
+    setUploadedImage(null);
+    setScanResult(null);
+    setFoundProduct(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const getModeInfo = () => {
     switch (mode) {
       case 'stock-in':
@@ -207,8 +289,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
       <audio ref={audioRef} src="/beep.mp3" />
 
       <Tabs defaultValue="scanner" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="scanner">スキャナー</TabsTrigger>
+          <TabsTrigger value="upload">画像アップロード</TabsTrigger>
           <TabsTrigger value="history">スキャン履歴</TabsTrigger>
         </TabsList>
 
@@ -379,6 +462,126 @@ export function QRCodeScanner({ onNavigate, mode = 'search' }: QRCodeScannerProp
                     </div>
                   </AlertDescription>
                 </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="upload" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="w-5 h-5" />
+                画像からQRコード読み取り
+              </CardTitle>
+              <CardDescription>
+                QRコードが含まれた画像ファイルをアップロードして読み取ります
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                {uploadedImage ? (
+                  <div className="space-y-4">
+                    <div className="relative inline-block">
+                      <img
+                        src={uploadedImage}
+                        alt="アップロードされた画像"
+                        className="max-w-full max-h-64 rounded-lg border"
+                      />
+                      {isProcessingImage && (
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
+                          <div className="text-white text-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
+                            処理中...
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      <Button onClick={openFileDialog} variant="outline">
+                        <Upload className="w-4 h-4 mr-2" />
+                        別の画像を選択
+                      </Button>
+                      <Button onClick={clearUploadedImage} variant="outline">
+                        クリア
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <ImageIcon className="w-16 h-16 mx-auto text-gray-400" />
+                    <div>
+                      <p className="text-lg font-medium text-gray-900 mb-2">
+                        QRコード画像をアップロード
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        PNG、JPG、GIF形式の画像に対応しています
+                      </p>
+                      <Button onClick={openFileDialog} className="mx-auto">
+                        <Upload className="w-4 h-4 mr-2" />
+                        ファイルを選択
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+
+              {/* 読み取り結果 */}
+              {scanResult && foundProduct && (
+                <Card className="border-green-200 bg-green-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0">
+                        {foundProduct.imageUrl ? (
+                          <img
+                            src={foundProduct.imageUrl}
+                            alt={foundProduct.name}
+                            className="w-16 h-16 rounded-lg object-cover border"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
+                            <Package className="w-8 h-8 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                          <h4 className="font-semibold text-green-800">商品を検出しました</h4>
+                        </div>
+                        <p className="font-medium">{foundProduct.name}</p>
+                        <p className="text-sm text-gray-600">SKU: {foundProduct.sku}</p>
+                        <p className="text-sm text-gray-600">在庫: {foundProduct.currentStock}個</p>
+                        <p className="text-sm text-gray-600">保管場所: {foundProduct.storageLocationName}</p>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => onNavigate('product-detail', foundProduct.id)}
+                        >
+                          詳細を見る
+                        </Button>
+                        {(mode === 'stock-in' || mode === 'stock-out') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onNavigate('stock-movement', foundProduct.id)}
+                          >
+                            {mode === 'stock-in' ? '入庫' : '出庫'}処理
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </CardContent>
           </Card>
