@@ -1,28 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// 認証が不要なパス
-const publicPaths = ['/login', '/reset-password'];
-
+// デモモード - 認証をスキップ
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  
-  // 公開パスはそのまま通す
-  if (publicPaths.includes(pathname)) {
-    return NextResponse.next();
-  }
-
-  // 認証トークンの確認（クライアントサイドのlocalStorageは使えないので、cookieを使用する実装に変更が必要）
-  // TODO: 実際の実装では、JWTトークンをhttpOnlyクッキーで管理する
-  const token = request.cookies.get('authToken')?.value;
-
-  // トークンがない場合はログインページへリダイレクト
-  if (!token) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
+  // デモアプリなので全てのリクエストを通す
   return NextResponse.next();
 }
 

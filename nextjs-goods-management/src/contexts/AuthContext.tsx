@@ -36,8 +36,9 @@ export const useAuth = () => {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // デモモード - デフォルトユーザーで自動ログイン
+  const [user, setUser] = useState<User | null>(defaultUser);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -45,24 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const checkAuth = () => {
-    setIsLoading(true);
-    const token = localStorage.getItem('authToken');
-    const userEmail = localStorage.getItem('userEmail');
-    
-    if (token && userEmail) {
-      // TODO: 実際はトークンの検証を行う
-      setUser({
-        email: userEmail,
-        name: userEmail === 'admin@example.com' ? '管理者' : 'ユーザー',
-        role: userEmail === 'admin@example.com' ? 'admin' : 'staff',
-        department: 'グッズ管理部'
-      });
-    } else {
-      // ログインページを使わず常に管理者として開始
+    // デモモード - 常に管理者として認証済み状態にする
+    if (typeof window !== 'undefined') {
       localStorage.setItem('authToken', 'demo-token');
       localStorage.setItem('userEmail', defaultUser.email);
-      setUser(defaultUser);
     }
+    setUser(defaultUser);
     setIsLoading(false);
   };
 
