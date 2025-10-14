@@ -49,7 +49,8 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
           </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-base sm:text-lg md:text-xl font-semibold text-foreground truncate">
-              グッズ在庫管理システム
+              <span className="hidden sm:inline">グッズ在庫管理システム</span>
+              <span className="sm:hidden">在庫管理</span>
             </h1>
             <p className="text-xs text-muted-foreground hidden md:block truncate">
               IPグッズの在庫状況をリアルタイムに可視化

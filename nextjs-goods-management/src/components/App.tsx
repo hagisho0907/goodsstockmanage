@@ -89,13 +89,13 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB]">
+    <div className="min-h-screen bg-[#F9FAFB] overflow-x-hidden">
       <Header
         onMenuClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         onNavigate={handleNavigate}
       />
       
-      <div className="flex">
+      <div className="flex overflow-x-hidden">
         <Navigation
           currentPage={currentPage}
           onNavigate={handleNavigate}
@@ -110,8 +110,8 @@ export default function App() {
           />
         )}
         
-        <main className="flex-1 px-3 py-2 sm:p-4 md:p-6 lg:p-8">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 w-full min-w-0 px-3 py-2 sm:p-4 md:p-6 lg:p-8">
+          <div className="w-full max-w-7xl mx-auto">
             {renderPage()}
           </div>
         </main>

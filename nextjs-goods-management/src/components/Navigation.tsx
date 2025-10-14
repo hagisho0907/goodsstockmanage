@@ -53,7 +53,7 @@ export function Navigation({ currentPage, onNavigate, isMobileOpen }: Navigation
   return (
     <nav
       className={`
-        fixed md:static inset-y-0 left-0 z-40 w-64
+        fixed md:static inset-y-0 left-0 z-40 w-64 max-w-[80vw]
         bg-white/95 border-r border-border/70 backdrop-blur-md shadow-lg md:shadow-sm
         transform transition-transform duration-300 ease-in-out
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
