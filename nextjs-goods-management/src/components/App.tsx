@@ -24,11 +24,14 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [pageKey, setPageKey] = useState(0);
 
   const handleNavigate = (page: string, productId?: string) => {
     setCurrentPage(page);
     setSelectedProductId(productId);
     setIsMobileMenuOpen(false);
+    // ページ切り替え時にキーを更新して強制再マウント
+    setPageKey(prev => prev + 1);
     window.scrollTo(0, 0);
   };
 
@@ -126,7 +129,9 @@ export default function App() {
         
         <main className="flex-1 w-full min-w-0 px-3 py-2 sm:p-4 md:p-6 lg:p-8 overflow-hidden">
           <div className="w-full max-w-7xl mx-auto overflow-hidden">
-            {renderPage()}
+            <div key={pageKey}>
+              {renderPage()}
+            </div>
           </div>
         </main>
       </div>

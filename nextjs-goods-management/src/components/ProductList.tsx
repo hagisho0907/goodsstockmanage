@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Plus, Edit, Eye, CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
@@ -36,6 +36,11 @@ export function ProductList({ onNavigate }: ProductListProps) {
   const refreshProducts = () => {
     setProducts(dataStore.getProducts());
   };
+
+  // ページが表示される度にデータを更新
+  useEffect(() => {
+    refreshProducts();
+  }, []);
 
   const getExpiryStatus = (salesEndDate?: string) => {
     const status = getExpiryStatusFromUtil(salesEndDate);

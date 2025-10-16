@@ -553,7 +553,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
           </div>
 
               {/* カメラビュー */}
-              <div className="relative aspect-video bg-black rounded-lg overflow-hidden w-full max-w-full">
+              <div className="relative aspect-[4/3] md:aspect-video bg-black rounded-lg overflow-hidden w-full max-w-full">
                 {/* 常にvideo要素をレンダリング（非表示で） */}
                 <video
                   ref={videoRef}
