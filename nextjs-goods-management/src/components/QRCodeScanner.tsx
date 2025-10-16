@@ -205,18 +205,27 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
   // QRコードのスキャン結果を処理
   const handleScan = useCallback((data: string) => {
+    console.log('[QRScanner] Raw QR data received:', data);
+    
+    // まずは何でもQRコードが読めたことを通知（テスト用）
+    toast.info(`QRコード検出: ${data.substring(0, 50)}...`);
+    
     try {
       // JSONパース
       const scanData = JSON.parse(data) as ScanResult;
+      console.log('[QRScanner] Parsed QR data:', scanData);
       
       if (!scanData.id || scanData.type !== 'product') {
-        toast.error('無効なQRコードです');
+        console.log('[QRScanner] Invalid QR code - missing id or wrong type');
+        toast.error('商品用QRコードではありません');
         return;
       }
 
       // 商品を検索
       const products = dataStore.getProducts();
+      console.log('[QRScanner] Available products:', products.length);
       const product = products.find(p => p.id === scanData.id);
+      console.log('[QRScanner] Found product:', product);
       
       if (product) {
         setScanResult(scanData);
@@ -245,15 +254,22 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         toast.error('商品が見つかりません');
       }
     } catch (error) {
-      console.error('QR data parse error:', error);
-      toast.error('QRコードの形式が正しくありません');
+      console.error('[QRScanner] QR data parse error:', error);
+      // JSONでない場合も許可（テスト用）
+      toast.warning('QRコードを検出しましたが、商品データ形式ではありません');
     }
   }, [continuousMode, mode, onProductDetected, stopCamera]);
 
   // QRコードスキャンループ（requestAnimationFrame使用）
   const startScanLoop = useCallback(() => {
+    console.log('[QRScanner] Starting scan loop');
+    let scanCount = 0;
+    
     const scan = () => {
+      scanCount++;
+      
       if (!videoRef.current || !canvasRef.current || !isScanning) {
+        console.log('[QRScanner] Scan stopped - missing refs or not scanning');
         return;
       }
 
@@ -261,7 +277,16 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
 
-      if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      if (!context) {
+        console.error('[QRScanner] No canvas context');
+        animationFrameRef.current = requestAnimationFrame(scan);
+        return;
+      }
+
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        if (scanCount % 30 === 0) { // ログを間引く
+          console.log('[QRScanner] Video not ready, readyState:', video.readyState);
+        }
         animationFrameRef.current = requestAnimationFrame(scan);
         return;
       }
@@ -270,21 +295,35 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
+      if (scanCount % 60 === 0) { // 1秒ごとにログ
+        console.log('[QRScanner] Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+        console.log('[QRScanner] Canvas dimensions:', canvas.width, 'x', canvas.height);
+      }
+
       // 動画フレームを Canvas に描画
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       // QRコードをスキャン
       try {
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        
+        if (scanCount % 60 === 0) { // 1秒ごとにログ
+          console.log('[QRScanner] Image data length:', imageData.data.length);
+          console.log('[QRScanner] Attempting QR detection...');
+        }
+        
         const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert'
+          inversionAttempts: 'attemptBoth'
         });
 
         if (code) {
+          console.log('[QRScanner] QR Code detected!', code.data);
           handleScan(code.data);
+        } else if (scanCount % 60 === 0) {
+          console.log('[QRScanner] No QR code found in frame');
         }
       } catch (error) {
-        console.error('QR scan error:', error);
+        console.error('[QRScanner] QR scan error:', error);
       }
 
       // 次のフレームをリクエスト
