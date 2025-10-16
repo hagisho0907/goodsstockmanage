@@ -76,46 +76,6 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // カメラ権限の確認
-  useEffect(() => {
-    const checkCameraPermission = async () => {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setHasCamera(false);
-        setPermissionStatus('denied');
-        return;
-      }
-
-      try {
-        // カメラ権限の状態を確認
-        if (navigator.permissions && navigator.permissions.query) {
-          try {
-            const result = await navigator.permissions.query({ name: 'camera' as any });
-            setPermissionStatus(result.state);
-            
-            // 権限状態の変更を監視
-            result.onchange = () => {
-              setPermissionStatus(result.state);
-            };
-          } catch (e) {
-            // permissions APIがサポートされていない場合
-            setPermissionStatus('prompt');
-          }
-        } else {
-          setPermissionStatus('prompt');
-        }
-
-        // カメラデバイスの列挙
-        await updateCameraDevices();
-      } catch (error) {
-        console.error('Camera permission check failed:', error);
-        setHasCamera(false);
-        setPermissionStatus('denied');
-      }
-    };
-
-    checkCameraPermission();
-  }, []);
-
   // カメラデバイスの更新
   const updateCameraDevices = useCallback(async () => {
     try {
@@ -150,6 +110,46 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       setHasCamera(false);
     }
   }, [selectedCameraId]);
+
+  // カメラ権限の確認
+  useEffect(() => {
+    const checkCameraPermission = async () => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setHasCamera(false);
+        setPermissionStatus('denied');
+        return;
+      }
+
+      try {
+        // カメラ権限の状態を確認
+        if (navigator.permissions && navigator.permissions.query) {
+          try {
+            const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+            setPermissionStatus(result.state);
+            
+            // 権限状態の変更を監視
+            result.onchange = () => {
+              setPermissionStatus(result.state);
+            };
+          } catch {
+            // permissions APIがサポートされていない場合
+            setPermissionStatus('prompt');
+          }
+        } else {
+          setPermissionStatus('prompt');
+        }
+
+        // カメラデバイスの列挙
+        await updateCameraDevices();
+      } catch (error) {
+        console.error('Camera permission check failed:', error);
+        setHasCamera(false);
+        setPermissionStatus('denied');
+      }
+    };
+
+    checkCameraPermission();
+  }, [updateCameraDevices]);
 
   // カメラを停止
   const stopCamera = useCallback(() => {
@@ -308,21 +308,23 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         
         toast.success('カメラを起動しました');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Camera start error:', error);
       
       let errorMessage = 'カメラの起動に失敗しました';
       
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        errorMessage = 'カメラへのアクセスが拒否されました';
-        setPermissionStatus('denied');
-      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-        errorMessage = 'カメラが見つかりません';
-        setHasCamera(false);
-      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-        errorMessage = 'カメラが他のアプリで使用中です';
-      } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
-        errorMessage = 'カメラの設定に問題があります';
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          errorMessage = 'カメラへのアクセスが拒否されました';
+          setPermissionStatus('denied');
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          errorMessage = 'カメラが見つかりません';
+          setHasCamera(false);
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+          errorMessage = 'カメラが他のアプリで使用中です';
+        } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+          errorMessage = 'カメラの設定に問題があります';
+        }
       }
       
       toast.error(errorMessage);
@@ -389,7 +391,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
           } else {
             toast.error('QRコードが見つかりませんでした');
           }
-        } catch (error) {
+        } catch {
           toast.error('QRコードの読み取りに失敗しました');
         }
         
