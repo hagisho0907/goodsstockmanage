@@ -76,6 +76,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const isScanningRef = useRef(false);
 
   // マウント状態の管理
   useEffect(() => {
@@ -201,6 +202,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     }
 
     setIsScanning(false);
+    isScanningRef.current = false;
   }, []);
 
   // QRコードのスキャン結果を処理
@@ -262,14 +264,26 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
   // QRコードスキャンループ（requestAnimationFrame使用）
   const startScanLoop = useCallback(() => {
-    console.log('[QRScanner] Starting scan loop');
+    console.log('[QRScanner] Starting scan loop, isScanning:', isScanning);
+    console.log('[QRScanner] Video ref:', videoRef.current);
+    console.log('[QRScanner] Canvas ref:', canvasRef.current);
+    
     let scanCount = 0;
     
     const scan = () => {
       scanCount++;
       
-      if (!videoRef.current || !canvasRef.current || !isScanning) {
-        console.log('[QRScanner] Scan stopped - missing refs or not scanning');
+      if (scanCount === 1) {
+        console.log('[QRScanner] First scan attempt');
+        console.log('[QRScanner] videoRef.current:', videoRef.current);
+        console.log('[QRScanner] canvasRef.current:', canvasRef.current);
+        console.log('[QRScanner] isScanning:', isScanning);
+      }
+      
+      if (!videoRef.current || !canvasRef.current || !isScanningRef.current) {
+        if (scanCount % 60 === 0) { // ログを間引く
+          console.log('[QRScanner] Scan stopped - videoRef:', !!videoRef.current, 'canvasRef:', !!canvasRef.current, 'isScanning:', isScanningRef.current);
+        }
         return;
       }
 
@@ -332,7 +346,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
     // スキャンを開始
     animationFrameRef.current = requestAnimationFrame(scan);
-  }, [handleScan, isScanning]);
+  }, [handleScan]);
 
   // カメラを起動
   const startCamera = useCallback(async () => {
@@ -381,13 +395,19 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         console.log('[QRScanner] Playing video...');
         await videoRef.current.play();
         console.log('[QRScanner] Video playing');
+        console.log('[QRScanner] Video readyState:', videoRef.current.readyState);
+        console.log('[QRScanner] Video dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
         
+        console.log('[QRScanner] Setting isScanning to true');
         setIsScanning(true);
+        isScanningRef.current = true;
         setPermissionStatus('granted');
         
         // スキャンループを開始
         setTimeout(() => {
-          console.log('[QRScanner] Starting scan loop');
+          console.log('[QRScanner] About to start scan loop, isScanning will be:', true);
+          console.log('[QRScanner] Video ref current:', videoRef.current);
+          console.log('[QRScanner] Canvas ref current:', canvasRef.current);
           startScanLoop();
         }, 500);
         
