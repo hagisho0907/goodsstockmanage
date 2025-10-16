@@ -10,10 +10,10 @@ import { ProductRegisterForm } from './ProductRegisterForm';
 import { ProductEditForm } from './ProductEditForm';
 import { StockMovement } from './StockMovement';
 import { ProductNoteForm } from './ProductNoteForm';
-import { Stocktaking } from './Stocktaking';
+// import { Stocktaking } from './Stocktaking';
 import { UserManagement } from './UserManagement';
 import { MasterDataManagement } from './MasterDataManagement';
-import { Reports } from './Reports';
+// import { Reports } from './Reports';
 import { QRCodeGenerator } from './QRCodeGenerator';
 import { QRCodeScanner } from './QRCodeScanner';
 import { Toaster } from './ui/sonner';
@@ -49,13 +49,29 @@ export default function App() {
       case 'product-note-add':
         return <ProductNoteForm onNavigate={handleNavigate} productId={selectedProductId} />;
       case 'stocktaking':
-        return <Stocktaking onNavigate={handleNavigate} />;
+        // return <Stocktaking onNavigate={handleNavigate} />;
+        return (
+          <div className="space-y-4">
+            <h1 className="text-xl sm:text-2xl font-bold">棚卸し</h1>
+            <div className="p-8 text-center border rounded-lg bg-gray-50">
+              <p className="text-muted-foreground">棚卸し機能は開発中です</p>
+            </div>
+          </div>
+        );
       case 'user-management':
         return <UserManagement onNavigate={handleNavigate} />;
       case 'master-data':
         return <MasterDataManagement onNavigate={handleNavigate} />;
       case 'reports':
-        return <Reports onNavigate={handleNavigate} />;
+        // return <Reports onNavigate={handleNavigate} />;
+        return (
+          <div className="space-y-4">
+            <h1 className="text-xl sm:text-2xl font-bold">レポート</h1>
+            <div className="p-8 text-center border rounded-lg bg-gray-50">
+              <p className="text-muted-foreground">レポート機能は開発中です</p>
+            </div>
+          </div>
+        );
       case 'qr-generator':
         return <QRCodeGenerator onNavigate={handleNavigate} productId={selectedProductId} />;
       case 'qr-scanner-stock-in':
@@ -65,7 +81,7 @@ export default function App() {
       case 'settings':
         return (
           <div className="space-y-4">
-            <h1>設定</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">設定</h1>
             <div className="p-8 text-center border rounded-lg bg-gray-50">
               <p className="text-muted-foreground">設定機能は開発中です</p>
             </div>

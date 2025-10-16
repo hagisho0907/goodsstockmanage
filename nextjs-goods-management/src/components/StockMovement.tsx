@@ -16,6 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { QRCodeScanner } from './QRCodeScanner';
 import { dataStore } from '../lib/dataStore';
+import { toast } from 'sonner';
+import { StockMovement as StockMovementType } from '../types';
 
 interface StockMovementProps {
   onNavigate: (page: string) => void;
@@ -32,6 +34,16 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
   const [activeTab, setActiveTab] = useState<'in' | 'out'>('in');
   const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([]);
   const [showScanner, setShowScanner] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  // フォーム状態管理
+  const [condition, setCondition] = useState<'new' | 'used' | 'damaged'>('new');
+  const [reason, setReason] = useState('');
+  const [destination, setDestination] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // QRスキャナーからの商品検出時の処理
   const handleProductDetected = useCallback((productId: string) => {
@@ -51,6 +63,44 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
     }
   }, []);
 
+  // 手動検索機能
+  const handleSearch = useCallback(() => {
+    if (!searchQuery.trim()) {
+      toast.warning('検索キーワードを入力してください');
+      return;
+    }
+
+    const products = dataStore.getProducts();
+    const results = products.filter(product => 
+      product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    
+    setSearchResults(results);
+    setShowSearchResults(true);
+
+    if (results.length === 0) {
+      toast.info('該当する商品が見つかりませんでした');
+    }
+  }, [searchQuery]);
+
+  // 検索結果から商品を追加
+  const addProductFromSearch = useCallback((product: any) => {
+    const newScannedProduct: ScannedProduct = {
+      id: product.id + '-' + Date.now(), // 重複を避けるためのユニークID
+      name: product.name,
+      sku: product.sku,
+      quantity: 1,
+    };
+    
+    setScannedProducts(prev => [...prev, newScannedProduct]);
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+    
+    toast.success(`商品を追加しました: ${product.name}`);
+  }, []);
+
   const removeProduct = (id: string) => {
     setScannedProducts(scannedProducts.filter(p => p.id !== id));
   };
@@ -63,21 +113,117 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // タブ切り替え時のフォームリセット
+  const handleTabChange = useCallback((newTab: 'in' | 'out') => {
+    setActiveTab(newTab);
+    setCondition('new');
+    setReason('');
+    setDestination('');
+    setNotes('');
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    onNavigate('dashboard');
+    
+    // バリデーション
+    if (scannedProducts.length === 0) {
+      toast.error('商品を追加してください');
+      return;
+    }
+
+    if (!reason) {
+      toast.error(`${activeTab === 'in' ? '入庫' : '出庫'}理由を選択してください`);
+      return;
+    }
+
+    if (activeTab === 'out' && !destination.trim()) {
+      toast.error('出庫先を入力してください');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // 各商品の入出庫処理
+      for (const product of scannedProducts) {
+        // 商品IDを取得（元のproduct.idから時刻部分を除去）
+        const originalProductId = product.id.split('-')[0];
+        
+        // 商品存在確認
+        const dbProduct = dataStore.getProducts().find(p => p.id === originalProductId);
+        if (!dbProduct) {
+          toast.error(`商品が見つかりません: ${product.name}`);
+          continue;
+        }
+
+        // 出庫の場合、在庫確認
+        if (activeTab === 'out') {
+          const availableStock = condition === 'new' ? dbProduct.stockBreakdown.new :
+                                condition === 'used' ? dbProduct.stockBreakdown.used :
+                                dbProduct.stockBreakdown.damaged;
+          
+          if (availableStock < product.quantity) {
+            toast.error(`${product.name}の${condition === 'new' ? '正常' : condition === 'used' ? '中古' : '破損'}在庫が不足しています（在庫: ${availableStock}個）`);
+            continue;
+          }
+        }
+
+        // StockMovementレコード作成
+        const movement: StockMovementType = {
+          id: dataStore.generateId(),
+          productId: originalProductId,
+          productName: product.name,
+          productSku: product.sku,
+          movementType: activeTab,
+          quantity: product.quantity,
+          condition: condition,
+          reason: reason,
+          notes: notes.trim() || undefined,
+          createdBy: 'current-user', // TODO: 実際のユーザーIDに置き換え
+          createdAt: new Date().toISOString(),
+        };
+
+        // データストアに追加（これで自動的に在庫数も更新される）
+        dataStore.addStockMovement(movement);
+      }
+
+      // 成功メッセージ
+      const totalQuantity = scannedProducts.reduce((sum, p) => sum + p.quantity, 0);
+      toast.success(`${activeTab === 'in' ? '入庫' : '出庫'}処理が完了しました（${totalQuantity}個）`);
+
+      // フォームリセット
+      setScannedProducts([]);
+      setCondition('new');
+      setReason('');
+      setDestination('');
+      setNotes('');
+
+      // ダッシュボードに戻る
+      setTimeout(() => {
+        onNavigate('dashboard');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Stock movement error:', error);
+      toast.error('処理中にエラーが発生しました');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="space-y-3 sm:space-y-4 md:space-y-6 w-full max-w-4xl mx-auto">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6 w-full max-w-4xl mx-auto px-2 sm:px-0">
       {/* Header */}
       <h1 className="text-xl sm:text-2xl font-bold">入出庫</h1>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'in' | 'out')} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2 gap-1">
-          <TabsTrigger value="in" className="py-3 min-h-[44px]">入庫</TabsTrigger>
-          <TabsTrigger value="out" className="py-3 min-h-[44px]">出庫</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as 'in' | 'out')} className="w-full">
+        <TabsList className="grid w-full max-w-xs sm:max-w-sm grid-cols-2 gap-1 mx-auto h-auto">
+          <TabsTrigger value="in" className="py-2 sm:py-3 min-h-[40px] sm:min-h-[44px] text-sm sm:text-base px-2 sm:px-4">
+            入庫
+          </TabsTrigger>
+          <TabsTrigger value="out" className="py-2 sm:py-3 min-h-[40px] sm:min-h-[44px] text-sm sm:text-base px-2 sm:px-4">
+            出庫
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="space-y-4 sm:space-y-6 mt-4 sm:mt-6 w-full overflow-hidden">
@@ -134,19 +280,86 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
 
                       <div className="text-center text-muted-foreground text-sm">または</div>
 
-                      <div>
+                      <div className="relative">
                         <Label htmlFor="manualSearch" className="text-sm sm:text-base">手動入力</Label>
                         <div className="flex flex-col sm:flex-row gap-2 mt-2">
                           <Input
                             id="manualSearch"
                             placeholder="SKU/商品名を入力"
                             className="flex-1"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleSearch();
+                              }
+                            }}
                           />
-                          <Button type="button" variant="outline" className="min-h-[44px] px-4 py-2">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="min-h-[44px] px-4 py-2"
+                            onClick={handleSearch}
+                          >
                             <Search className="h-4 w-4 sm:mr-2" />
                             <span className="hidden sm:inline">検索</span>
                           </Button>
                         </div>
+
+                        {/* 検索結果表示 */}
+                        {showSearchResults && (
+                          <div className="mt-3 border rounded-lg bg-white shadow-md max-h-60 overflow-y-auto">
+                            {searchResults.length > 0 ? (
+                              <div className="p-2">
+                                <p className="text-sm text-muted-foreground mb-2 px-2">
+                                  {searchResults.length}件の商品が見つかりました
+                                </p>
+                                {searchResults.map((product) => (
+                                  <button
+                                    key={product.id}
+                                    type="button"
+                                    className="w-full text-left p-3 hover:bg-gray-50 rounded border-b last:border-b-0 transition-colors"
+                                    onClick={() => addProductFromSearch(product)}
+                                  >
+                                    <div className="flex justify-between items-start">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium truncate">{product.name}</p>
+                                        <p className="text-sm text-muted-foreground">
+                                          SKU: {product.sku}
+                                        </p>
+                                        <p className="text-sm text-muted-foreground">
+                                          在庫: {product.currentStock}個
+                                        </p>
+                                      </div>
+                                      <div className="text-sm text-blue-600 ml-2">
+                                        追加
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="p-4 text-center text-muted-foreground">
+                                商品が見つかりませんでした
+                              </div>
+                            )}
+                            <div className="p-2 border-t bg-gray-50">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setShowSearchResults(false);
+                                  setSearchResults([]);
+                                }}
+                                className="w-full text-sm"
+                              >
+                                閉じる
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
@@ -210,7 +423,11 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                   <Label htmlFor="condition">
                     在庫状態 <span className="text-[#EF4444]">*</span>
                   </Label>
-                  <Select required defaultValue="new">
+                  <Select 
+                    required 
+                    value={condition} 
+                    onValueChange={(value: 'new' | 'used' | 'damaged') => setCondition(value)}
+                  >
                     <SelectTrigger id="condition">
                       <SelectValue />
                     </SelectTrigger>
@@ -245,7 +462,11 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                     {activeTab === 'in' ? '入庫' : '出庫'}理由{' '}
                     <span className="text-[#EF4444]">*</span>
                   </Label>
-                  <Select required>
+                  <Select 
+                    required 
+                    value={reason} 
+                    onValueChange={setReason}
+                  >
                     <SelectTrigger id="reason">
                       <SelectValue placeholder="選択してください" />
                     </SelectTrigger>
@@ -276,6 +497,8 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                     <Input
                       id="destination"
                       placeholder="出庫先を入力"
+                      value={destination}
+                      onChange={(e) => setDestination(e.target.value)}
                     />
                   </div>
                 )}
@@ -286,6 +509,8 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                     id="notes"
                     placeholder="備考を入力"
                     rows={3}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                   />
                 </div>
               </CardContent>
@@ -295,11 +520,20 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 type="submit"
-                disabled={scannedProducts.length === 0}
+                disabled={scannedProducts.length === 0 || isSubmitting}
                 className="bg-[#10B981] hover:bg-[#059669] min-h-[44px] px-4 py-3 order-1 sm:order-none"
               >
-                <Save className="h-4 w-4 mr-2" />
-                確定処理
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    処理中...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    確定処理
+                  </>
+                )}
               </Button>
               <Button
                 type="button"

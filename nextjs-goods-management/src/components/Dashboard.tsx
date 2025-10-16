@@ -59,28 +59,28 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Button
             onClick={() => onNavigate('product-register')}
-            className="h-auto py-8 flex flex-col gap-3 bg-[#2563EB] hover:bg-[#1d4ed8] text-base"
+            className="h-auto py-8 flex flex-col gap-3 bg-[#2563EB] hover:bg-[#1d4ed8] text-base text-white"
           >
             <Plus className="h-8 w-8" />
             <span>物品登録</span>
           </Button>
           <Button
             onClick={() => onNavigate('stock-movement')}
-            className="h-auto py-8 flex flex-col gap-3 bg-[#10B981] hover:bg-[#059669] text-base"
+            className="h-auto py-8 flex flex-col gap-3 bg-[#10B981] hover:bg-[#059669] text-base text-white"
           >
             <LogIn className="h-8 w-8" />
             <span>入庫処理</span>
           </Button>
           <Button
             onClick={() => onNavigate('stock-movement')}
-            className="h-auto py-8 flex flex-col gap-3 bg-[#10B981] hover:bg-[#059669] text-base"
+            className="h-auto py-8 flex flex-col gap-3 bg-[#10B981] hover:bg-[#059669] text-base text-white"
           >
             <LogOut className="h-8 w-8" />
             <span>出庫処理</span>
           </Button>
           <Button
             onClick={() => onNavigate('qr-generator')}
-            className="h-auto py-8 flex flex-col gap-3 bg-[#F59E0B] hover:bg-[#D97706] text-base"
+            className="h-auto py-8 flex flex-col gap-3 bg-[#F59E0B] hover:bg-[#D97706] text-base text-white"
           >
             <QrCode className="h-8 w-8" />
             <span>QR生成</span>
