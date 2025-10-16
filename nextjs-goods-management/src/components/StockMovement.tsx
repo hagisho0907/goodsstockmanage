@@ -17,7 +17,7 @@ import { Badge } from './ui/badge';
 import { QRCodeScanner } from './QRCodeScanner';
 import { dataStore } from '../lib/dataStore';
 import { toast } from 'sonner';
-import { StockMovement as StockMovementType } from '../types';
+import { StockMovement as StockMovementType, Product } from '../types';
 
 interface StockMovementProps {
   onNavigate: (page: string) => void;
@@ -35,7 +35,7 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
   const [scannedProducts, setScannedProducts] = useState<ScannedProduct[]>([]);
   const [showScanner, setShowScanner] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   
   // フォーム状態管理
@@ -85,7 +85,7 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
   }, [searchQuery]);
 
   // 検索結果から商品を追加
-  const addProductFromSearch = useCallback((product: any) => {
+  const addProductFromSearch = useCallback((product: Product) => {
     const newScannedProduct: ScannedProduct = {
       id: product.id + '-' + Date.now(), // 重複を避けるためのユニークID
       name: product.name,

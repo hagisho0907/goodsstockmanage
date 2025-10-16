@@ -253,6 +253,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   }, [mode, onProductDetected, stopCamera]);
 
   // QRコードスキャンループ（requestAnimationFrame使用）
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const startScanLoop = useCallback(() => {
     console.log('[QRScanner] Starting scan loop, isScanning:', isScanning);
     console.log('[QRScanner] Video ref:', videoRef.current);
