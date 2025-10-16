@@ -563,24 +563,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                   className={`w-full h-full object-cover max-w-full ${!isScanning ? 'hidden' : ''}`}
                 />
                 
-                {isScanning ? (
-                  <>
-                    {/* スキャンフレーム */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="relative w-64 h-64">
-                        <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
-                        <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg" />
-                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg" />
-                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg" />
-                      </div>
-                    </div>
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                      <p className="text-white bg-black bg-opacity-50 px-3 py-2 rounded text-sm">
-                        QRコードを枠内に
-                      </p>
-                    </div>
-                  </>
-                ) : (
+                {isScanning ? null : (
                   <div className="flex flex-col items-center justify-center h-full text-white">
                     {hasCamera ? (
                       <>
