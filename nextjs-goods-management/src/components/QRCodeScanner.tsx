@@ -61,13 +61,14 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     data: ScanResult;
     product?: Product;
   }>>([]);
-  const [hasCamera, setHasCamera] = useState(true);
+  const [hasCamera, setHasCamera] = useState(false); // 初期値をfalseに変更
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [isRequestingCamera, setIsRequestingCamera] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<'checking' | 'granted' | 'denied' | 'prompt'>('checking');
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -75,6 +76,11 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+
+  // マウント状態の管理
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // カメラデバイスの更新
   const updateCameraDevices = useCallback(async () => {
@@ -118,8 +124,10 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     }
   }, [selectedCameraId]);
 
-  // カメラ権限の確認
+  // カメラ権限の確認（マウント後のみ）
   useEffect(() => {
+    if (!isMounted) return;
+    
     const checkCameraPermission = async () => {
       console.log('[QRScanner] Checking camera permission...');
       console.log('[QRScanner] Current URL:', window.location.href);
@@ -169,7 +177,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     };
 
     checkCameraPermission();
-  }, [updateCameraDevices]);
+  }, [isMounted, updateCameraDevices]);
 
   // カメラを停止
   const stopCamera = useCallback(() => {
@@ -483,6 +491,24 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
   const modeInfo = getModeInfo();
 
+  // マウント前は何も表示しない（Hydration エラー回避）
+  if (!isMounted) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            {modeInfo.icon}
+            {modeInfo.title}
+          </h1>
+          <p className="text-muted-foreground mt-1">{modeInfo.description}</p>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <p>読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -583,15 +609,17 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
               {/* カメラビュー */}
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                {/* 常にvideo要素をレンダリング（非表示で） */}
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-full object-cover ${!isScanning ? 'hidden' : ''}`}
+                />
+                
                 {isScanning ? (
                   <>
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover"
-                    />
                     {/* スキャンフレーム */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                       <div className="w-64 h-64 border-2 border-white rounded-lg">
