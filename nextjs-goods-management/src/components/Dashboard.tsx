@@ -1,4 +1,4 @@
-import { Package, AlertTriangle, XCircle, Plus, LogIn, LogOut, Scan, QrCode } from 'lucide-react';
+import { Package, AlertTriangle, XCircle, Plus, LogIn, LogOut, QrCode } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
@@ -56,40 +56,33 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       {/* Quick Actions */}
       <div>
         <h2 className="mb-3">クイックアクション</h2>
-        <div className="grid gap-3 sm:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Button
             onClick={() => onNavigate('product-register')}
-            className="h-auto py-6 flex flex-col gap-2 bg-[#2563EB] hover:bg-[#1d4ed8]"
+            className="h-auto py-8 flex flex-col gap-3 bg-[#2563EB] hover:bg-[#1d4ed8] text-base"
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-8 w-8" />
             <span>物品登録</span>
           </Button>
           <Button
             onClick={() => onNavigate('stock-movement')}
-            className="h-auto py-6 flex flex-col gap-2 bg-[#10B981] hover:bg-[#059669]"
+            className="h-auto py-8 flex flex-col gap-3 bg-[#10B981] hover:bg-[#059669] text-base"
           >
-            <LogIn className="h-6 w-6" />
+            <LogIn className="h-8 w-8" />
             <span>入庫処理</span>
           </Button>
           <Button
             onClick={() => onNavigate('stock-movement')}
-            className="h-auto py-6 flex flex-col gap-2 bg-[#10B981] hover:bg-[#059669]"
+            className="h-auto py-8 flex flex-col gap-3 bg-[#10B981] hover:bg-[#059669] text-base"
           >
-            <LogOut className="h-6 w-6" />
+            <LogOut className="h-8 w-8" />
             <span>出庫処理</span>
           </Button>
           <Button
-            onClick={() => onNavigate('qr-scanner')}
-            className="h-auto py-6 flex flex-col gap-2 bg-[#8B5CF6] hover:bg-[#7C3AED]"
-          >
-            <Scan className="h-6 w-6" />
-            <span>QRスキャン</span>
-          </Button>
-          <Button
             onClick={() => onNavigate('qr-generator')}
-            className="h-auto py-6 flex flex-col gap-2 bg-[#F59E0B] hover:bg-[#D97706]"
+            className="h-auto py-8 flex flex-col gap-3 bg-[#F59E0B] hover:bg-[#D97706] text-base"
           >
-            <QrCode className="h-6 w-6" />
+            <QrCode className="h-8 w-8" />
             <span>QR生成</span>
           </Button>
         </div>

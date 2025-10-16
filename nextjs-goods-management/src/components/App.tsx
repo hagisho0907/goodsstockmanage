@@ -108,8 +108,8 @@ export default function App() {
           />
         )}
         
-        <main className="flex-1 w-full min-w-0 px-3 py-2 sm:p-4 md:p-6 lg:p-8">
-          <div className="w-full max-w-7xl mx-auto">
+        <main className="flex-1 w-full min-w-0 px-3 py-2 sm:p-4 md:p-6 lg:p-8 overflow-hidden">
+          <div className="w-full max-w-7xl mx-auto overflow-hidden">
             {renderPage()}
           </div>
         </main>

@@ -507,7 +507,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-hidden">
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           {modeInfo.icon}
@@ -516,14 +516,14 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         <p className="text-muted-foreground mt-1">{modeInfo.description}</p>
       </div>
 
-      <Card>
+      <Card className="w-full max-w-full overflow-hidden">
         <CardHeader>
           <CardTitle>カメラスキャン</CardTitle>
           <CardDescription>
             QRコードをカメラでスキャンします
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 w-full max-w-full overflow-hidden">
           {/* 権限エラー表示 */}
           {permissionStatus === 'denied' && (
             <Alert variant="destructive">
@@ -588,14 +588,14 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
           </div>
 
               {/* カメラビュー */}
-              <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+              <div className="relative aspect-video bg-black rounded-lg overflow-hidden w-full max-w-full">
                 {/* 常にvideo要素をレンダリング（非表示で） */}
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-full object-cover ${!isScanning ? 'hidden' : ''}`}
+                  className={`w-full h-full object-cover max-w-full ${!isScanning ? 'hidden' : ''}`}
                 />
                 
                 {isScanning ? (

@@ -70,17 +70,17 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
   };
 
   return (
-    <div className="space-y-3 sm:space-y-4 md:space-y-6 max-w-4xl">
+    <div className="space-y-3 sm:space-y-4 md:space-y-6 w-full max-w-4xl mx-auto">
       {/* Header */}
       <h1 className="text-xl sm:text-2xl font-bold">入出庫</h1>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'in' | 'out')}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'in' | 'out')} className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2 gap-1">
           <TabsTrigger value="in" className="py-3 min-h-[44px]">入庫</TabsTrigger>
           <TabsTrigger value="out" className="py-3 min-h-[44px]">出庫</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">
+        <TabsContent value={activeTab} className="space-y-4 sm:space-y-6 mt-4 sm:mt-6 w-full overflow-hidden">
           <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 md:space-y-6">
             {/* Scan Mode */}
             <Card>
@@ -88,12 +88,14 @@ export function StockMovement({ onNavigate }: StockMovementProps) {
                 <Label className="text-sm sm:text-base">スキャンモード</Label>
                 <div className="mt-3 space-y-3 sm:space-y-4">
                   {showScanner ? (
-                    <div className="border rounded-lg overflow-hidden">
-                      <QRCodeScanner 
-                        onNavigate={() => {}} // ダミー関数
-                        mode={activeTab === 'in' ? 'stock-in' : 'stock-out'}
-                        onProductDetected={handleProductDetected}
-                      />
+                    <div className="border rounded-lg overflow-hidden w-full max-w-full">
+                      <div className="w-full overflow-hidden">
+                        <QRCodeScanner 
+                          onNavigate={() => {}} // ダミー関数
+                          mode={activeTab === 'in' ? 'stock-in' : 'stock-out'}
+                          onProductDetected={handleProductDetected}
+                        />
+                      </div>
                       <div className="p-3 sm:p-4 border-t bg-gray-50">
                         <Button
                           type="button"
