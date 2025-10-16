@@ -18,6 +18,8 @@ export const generateAlerts = (products: Product[]): Alert[] => {
   const alerts: Alert[] = [];
   const currentDateTime = getCurrentDateTime();
 
+  console.log('[AlertUtils] Generating alerts for', products.length, 'products');
+
   products.forEach(product => {
     // 在庫少数アラート
     if (product.currentStock <= ALERT_THRESHOLDS.LOW_STOCK && product.currentStock > 0) {
@@ -44,9 +46,11 @@ export const generateAlerts = (products: Product[]): Alert[] => {
     }
 
     // 販売期限関連のアラート
-    if (product.salesEndDate) {
-      const expiryStatus = getExpiryStatus(product.salesEndDate, ALERT_THRESHOLDS.EXPIRING_SOON);
-      const daysUntilExpiry = getDaysUntilExpiry(product.salesEndDate);
+    if (product.ipInfo?.salesEndDate) {
+      const expiryStatus = getExpiryStatus(product.ipInfo.salesEndDate, ALERT_THRESHOLDS.EXPIRING_SOON);
+      const daysUntilExpiry = getDaysUntilExpiry(product.ipInfo.salesEndDate);
+
+      console.log(`[AlertUtils] Product ${product.name}: salesEndDate=${product.ipInfo.salesEndDate}, status=${expiryStatus}, days=${daysUntilExpiry}`);
 
       if (expiryStatus === 'expired') {
         alerts.push({
@@ -69,6 +73,8 @@ export const generateAlerts = (products: Product[]): Alert[] => {
       }
     }
   });
+
+  console.log(`[AlertUtils] Generated ${alerts.length} alerts:`, alerts.map(a => a.message));
 
   // 作成日時の降順でソート
   return alerts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
