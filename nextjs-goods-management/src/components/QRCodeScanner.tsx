@@ -78,11 +78,16 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
   // カメラデバイスの更新
   const updateCameraDevices = useCallback(async () => {
+    console.log('[QRScanner] Updating camera devices...');
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
+      console.log('[QRScanner] All devices:', devices);
+      
       const videoInputs = devices.filter(device => device.kind === 'videoinput');
+      console.log('[QRScanner] Video inputs found:', videoInputs.length, videoInputs);
       
       if (videoInputs.length === 0) {
+        console.log('[QRScanner] No video inputs found');
         setHasCamera(false);
         return;
       }
@@ -100,13 +105,15 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         );
         
         if (backCamera) {
+          console.log('[QRScanner] Back camera found:', backCamera);
           setSelectedCameraId(backCamera.deviceId);
         } else {
+          console.log('[QRScanner] Using first camera:', videoInputs[0]);
           setSelectedCameraId(videoInputs[0].deviceId);
         }
       }
     } catch (error) {
-      console.error('Failed to enumerate devices:', error);
+      console.error('[QRScanner] Failed to enumerate devices:', error);
       setHasCamera(false);
     }
   }, [selectedCameraId]);
@@ -114,7 +121,16 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   // カメラ権限の確認
   useEffect(() => {
     const checkCameraPermission = async () => {
+      console.log('[QRScanner] Checking camera permission...');
+      console.log('[QRScanner] Current URL:', window.location.href);
+      console.log('[QRScanner] Protocol:', window.location.protocol);
+      console.log('[QRScanner] Is HTTPS:', window.location.protocol === 'https:');
+      console.log('[QRScanner] Is localhost:', window.location.hostname === 'localhost');
+      console.log('[QRScanner] navigator.mediaDevices:', navigator.mediaDevices);
+      console.log('[QRScanner] getUserMedia available:', navigator.mediaDevices?.getUserMedia);
+      
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.log('[QRScanner] Media devices API not available');
         setHasCamera(false);
         setPermissionStatus('denied');
         return;
@@ -125,24 +141,28 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         if (navigator.permissions && navigator.permissions.query) {
           try {
             const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
+            console.log('[QRScanner] Permission query result:', result.state);
             setPermissionStatus(result.state);
             
             // 権限状態の変更を監視
             result.onchange = () => {
+              console.log('[QRScanner] Permission changed to:', result.state);
               setPermissionStatus(result.state);
             };
-          } catch {
+          } catch (e) {
             // permissions APIがサポートされていない場合
+            console.log('[QRScanner] Permissions API not supported');
             setPermissionStatus('prompt');
           }
         } else {
+          console.log('[QRScanner] Permissions API not available');
           setPermissionStatus('prompt');
         }
 
         // カメラデバイスの列挙
         await updateCameraDevices();
       } catch (error) {
-        console.error('Camera permission check failed:', error);
+        console.error('[QRScanner] Camera permission check failed:', error);
         setHasCamera(false);
         setPermissionStatus('denied');
       }
@@ -269,7 +289,14 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
   // カメラを起動
   const startCamera = useCallback(async () => {
-    if (isRequestingCamera) return;
+    console.log('[QRScanner] Starting camera...');
+    console.log('[QRScanner] isRequestingCamera:', isRequestingCamera);
+    console.log('[QRScanner] selectedCameraId:', selectedCameraId);
+    
+    if (isRequestingCamera) {
+      console.log('[QRScanner] Already requesting camera, returning');
+      return;
+    }
 
     try {
       setIsRequestingCamera(true);
@@ -288,32 +315,49 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
             },
         audio: false
       };
+      
+      console.log('[QRScanner] Camera constraints:', constraints);
 
       // カメラストリームを取得
+      console.log('[QRScanner] Requesting getUserMedia...');
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('[QRScanner] Got stream:', stream);
+      console.log('[QRScanner] Stream tracks:', stream.getTracks());
+      
       streamRef.current = stream;
 
       // ビデオ要素に設定
       if (videoRef.current) {
+        console.log('[QRScanner] Setting video srcObject');
         videoRef.current.srcObject = stream;
+        
+        console.log('[QRScanner] Playing video...');
         await videoRef.current.play();
+        console.log('[QRScanner] Video playing');
         
         setIsScanning(true);
         setPermissionStatus('granted');
         
         // スキャンループを開始
         setTimeout(() => {
+          console.log('[QRScanner] Starting scan loop');
           startScanLoop();
         }, 500);
         
         toast.success('カメラを起動しました');
+      } else {
+        console.error('[QRScanner] Video element not found');
       }
     } catch (error) {
-      console.error('Camera start error:', error);
+      console.error('[QRScanner] Camera start error:', error);
+      console.error('[QRScanner] Error type:', typeof error);
+      console.error('[QRScanner] Error name:', (error as any)?.name);
+      console.error('[QRScanner] Error message:', (error as any)?.message);
       
       let errorMessage = 'カメラの起動に失敗しました';
       
       if (error instanceof Error) {
+        console.log('[QRScanner] Error instance detected:', error.name);
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
           errorMessage = 'カメラへのアクセスが拒否されました';
           setPermissionStatus('denied');
@@ -498,7 +542,17 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                 )}
 
                 <Button
-                  onClick={() => isScanning ? stopCamera() : startCamera()}
+                  onClick={() => {
+                    console.log('[QRScanner] Button clicked');
+                    console.log('[QRScanner] Current state - isScanning:', isScanning);
+                    console.log('[QRScanner] Current state - hasCamera:', hasCamera);
+                    console.log('[QRScanner] Current state - permissionStatus:', permissionStatus);
+                    if (isScanning) {
+                      stopCamera();
+                    } else {
+                      startCamera();
+                    }
+                  }}
                   variant={isScanning ? 'destructive' : 'default'}
                   disabled={isRequestingCamera || !hasCamera}
                   className="min-w-[140px]"
