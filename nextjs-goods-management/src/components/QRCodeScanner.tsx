@@ -4,11 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import jsQR from 'jsqr';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
 import { Alert, AlertDescription } from './ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
   Select,
   SelectContent,
@@ -21,12 +17,9 @@ import {
   Camera, 
   CameraOff, 
   QrCode, 
-  Package, 
   ArrowRightLeft,
   AlertCircle,
   CheckCircle,
-  Upload,
-  Image as ImageIcon,
   Loader2,
 } from 'lucide-react';
 import { dataStore } from '../lib/dataStore';
@@ -55,24 +48,15 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [foundProduct, setFoundProduct] = useState<Product | null>(null);
-  const [continuousMode, setContinuousMode] = useState(false);
-  const [scanHistory, setScanHistory] = useState<Array<{
-    timestamp: Date;
-    data: ScanResult;
-    product?: Product;
-  }>>([]);
-  const [hasCamera, setHasCamera] = useState(false); // 初期値をfalseに変更
+  const [hasCamera, setHasCamera] = useState(false);
   const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [isRequestingCamera, setIsRequestingCamera] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<'checking' | 'granted' | 'denied' | 'prompt'>('checking');
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scanIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -242,13 +226,6 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         console.log('[QRScanner] Product found! Setting scan result and found product');
         setScanResult(scanData);
         setFoundProduct(product);
-        
-        // 履歴に追加
-        setScanHistory(prev => [{
-          timestamp: new Date(),
-          data: scanData,
-          product
-        }, ...prev.slice(0, 9)]);
 
         console.log('[QRScanner] Showing success toast');
         toast.success(`商品を検出: ${product.name}`);
@@ -261,10 +238,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
           }
         }
 
-        if (!continuousMode) {
-          console.log('[QRScanner] Not continuous mode, stopping camera');
-          stopCamera();
-        }
+        // 常にカメラを停止（シンプル化）
+        console.log('[QRScanner] Stopping camera after detection');
+        stopCamera();
       } else {
         console.log('[QRScanner] Product not found in database');
         toast.error('商品が見つかりません');
@@ -274,7 +250,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       // JSONでない場合も許可（テスト用）
       toast.warning('QRコードを検出しましたが、商品データ形式ではありません');
     }
-  }, [continuousMode, mode, onProductDetected, stopCamera]);
+  }, [mode, onProductDetected, stopCamera]);
 
   // QRコードスキャンループ（requestAnimationFrame使用）
   const startScanLoop = useCallback(() => {
@@ -486,58 +462,6 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     };
   }, [updateCameraDevices]);
 
-  // 画像アップロード処理
-  const handleImageUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageSrc = e.target?.result as string;
-      setUploadedImage(imageSrc);
-      setIsProcessingImage(true);
-
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        if (!ctx) {
-          toast.error('画像の処理に失敗しました');
-          setIsProcessingImage(false);
-          return;
-        }
-
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.drawImage(img, 0, 0);
-        
-        try {
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
-          
-          if (code) {
-            handleScan(code.data);
-          } else {
-            toast.error('QRコードが見つかりませんでした');
-          }
-        } catch {
-          toast.error('QRコードの読み取りに失敗しました');
-        }
-        
-        setIsProcessingImage(false);
-      };
-      
-      img.onerror = () => {
-        toast.error('画像の読み込みに失敗しました');
-        setIsProcessingImage(false);
-      };
-      
-      img.src = imageSrc;
-    };
-    
-    reader.readAsDataURL(file);
-  }, [handleScan]);
 
   const getModeInfo = () => {
     switch (mode) {
@@ -592,93 +516,76 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
         <p className="text-muted-foreground mt-1">{modeInfo.description}</p>
       </div>
 
-      <Tabs defaultValue="scanner" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="scanner">スキャナー</TabsTrigger>
-          <TabsTrigger value="upload">画像アップロード</TabsTrigger>
-          <TabsTrigger value="history">履歴</TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardHeader>
+          <CardTitle>カメラスキャン</CardTitle>
+          <CardDescription>
+            QRコードをカメラでスキャンします
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* 権限エラー表示 */}
+          {permissionStatus === 'denied' && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                カメラへのアクセスが拒否されています。
+                ブラウザの設定からカメラの使用を許可してください。
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <TabsContent value="scanner" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>カメラスキャン</CardTitle>
-              <CardDescription>
-                カメラを使用してQRコードをスキャンします
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* 権限エラー表示 */}
-              {permissionStatus === 'denied' && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    カメラへのアクセスが拒否されています。
-                    ブラウザの設定からカメラの使用を許可してください。
-                  </AlertDescription>
-                </Alert>
+          {/* カメラコントロール */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            {cameraDevices.length > 1 && (
+              <Select value={selectedCameraId} onValueChange={setSelectedCameraId}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="カメラを選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cameraDevices.map((device, index) => (
+                    <SelectItem key={device.deviceId} value={device.deviceId}>
+                      {device.label || `カメラ ${index + 1}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            <Button
+              onClick={() => {
+                console.log('[QRScanner] Button clicked');
+                console.log('[QRScanner] Current state - isScanning:', isScanning);
+                console.log('[QRScanner] Current state - hasCamera:', hasCamera);
+                console.log('[QRScanner] Current state - permissionStatus:', permissionStatus);
+                if (isScanning) {
+                  stopCamera();
+                } else {
+                  startCamera();
+                }
+              }}
+              variant={isScanning ? 'destructive' : 'default'}
+              disabled={isRequestingCamera || !hasCamera}
+              className="min-w-[140px]"
+            >
+              {isRequestingCamera ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  準備中...
+                </>
+              ) : isScanning ? (
+                <>
+                  <CameraOff className="mr-2 h-4 w-4" />
+                  停止
+                </>
+              ) : (
+                <>
+                  <Camera className="mr-2 h-4 w-4" />
+                  開始
+                </>
               )}
-
-              {/* カメラコントロール */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex items-center space-x-2 flex-1">
-                  <Switch
-                    id="continuous"
-                    checked={continuousMode}
-                    onCheckedChange={setContinuousMode}
-                  />
-                  <Label htmlFor="continuous">連続スキャン</Label>
-                </div>
-
-                {cameraDevices.length > 1 && (
-                  <Select value={selectedCameraId} onValueChange={setSelectedCameraId}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
-                      <SelectValue placeholder="カメラを選択" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {cameraDevices.map((device, index) => (
-                        <SelectItem key={device.deviceId} value={device.deviceId}>
-                          {device.label || `カメラ ${index + 1}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-
-                <Button
-                  onClick={() => {
-                    console.log('[QRScanner] Button clicked');
-                    console.log('[QRScanner] Current state - isScanning:', isScanning);
-                    console.log('[QRScanner] Current state - hasCamera:', hasCamera);
-                    console.log('[QRScanner] Current state - permissionStatus:', permissionStatus);
-                    if (isScanning) {
-                      stopCamera();
-                    } else {
-                      startCamera();
-                    }
-                  }}
-                  variant={isScanning ? 'destructive' : 'default'}
-                  disabled={isRequestingCamera || !hasCamera}
-                  className="min-w-[140px]"
-                >
-                  {isRequestingCamera ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      準備中...
-                    </>
-                  ) : isScanning ? (
-                    <>
-                      <CameraOff className="mr-2 h-4 w-4" />
-                      停止
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="mr-2 h-4 w-4" />
-                      開始
-                    </>
-                  )}
-                </Button>
-              </div>
+            </Button>
+          </div>
 
               {/* カメラビュー */}
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
@@ -760,122 +667,6 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="upload" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>画像からQRコード読み取り</CardTitle>
-              <CardDescription>
-                QRコードが含まれた画像をアップロードして読み取ります
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  {uploadedImage ? (
-                    <div className="space-y-4">
-                      <img
-                        src={uploadedImage}
-                        alt="Uploaded"
-                        className="max-w-full max-h-64 mx-auto rounded"
-                      />
-                      {isProcessingImage && (
-                        <div className="flex items-center justify-center">
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          処理中...
-                        </div>
-                      )}
-                      <div className="flex gap-2 justify-center">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setUploadedImage(null);
-                            setScanResult(null);
-                            setFoundProduct(null);
-                          }}
-                        >
-                          クリア
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          別の画像を選択
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <ImageIcon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                      <p className="text-gray-600 mb-4">
-                        クリックまたはドラッグ＆ドロップで画像をアップロード
-                      </p>
-                      <Button onClick={() => fileInputRef.current?.click()}>
-                        <Upload className="mr-2 h-4 w-4" />
-                        ファイルを選択
-                      </Button>
-                    </>
-                  )}
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>スキャン履歴</CardTitle>
-              <CardDescription>
-                最近スキャンした商品の履歴
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {scanHistory.length > 0 ? (
-                <div className="space-y-2">
-                  {scanHistory.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                      onClick={() => item.product && onNavigate('product-detail', item.product.id)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Package className="w-5 h-5 text-gray-500" />
-                        <div>
-                          <p className="font-medium">{item.product?.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {item.timestamp.toLocaleString('ja-JP')}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">{item.product?.categoryName}</Badge>
-                    </div>
-                  ))}
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setScanHistory([])}
-                  >
-                    履歴をクリア
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-center text-gray-500 py-8">
-                  まだスキャン履歴はありません
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
 
       {/* スキャン用Canvas（非表示） */}
       <canvas ref={canvasRef} className="hidden" />

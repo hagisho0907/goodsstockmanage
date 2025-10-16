@@ -58,8 +58,6 @@ export default function App() {
         return <Reports onNavigate={handleNavigate} />;
       case 'qr-generator':
         return <QRCodeGenerator onNavigate={handleNavigate} productId={selectedProductId} />;
-      case 'qr-scanner':
-        return <QRCodeScanner onNavigate={handleNavigate} mode="search" />;
       case 'qr-scanner-stock-in':
         return <QRCodeScanner onNavigate={handleNavigate} mode="stock-in" />;
       case 'qr-scanner-stock-out':

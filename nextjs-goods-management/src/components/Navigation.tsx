@@ -10,7 +10,6 @@ import {
   FileText,
   Settings,
   QrCode,
-  Scan,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,7 +27,6 @@ export function Navigation({ currentPage, onNavigate, isMobileOpen }: Navigation
     { id: 'dashboard', label: 'ダッシュボード', icon: LayoutDashboard, minRole: 'staff' },
     { id: 'products', label: '物品一覧', icon: Package, minRole: 'staff' },
     { id: 'stock-movement', label: '入出庫', icon: ArrowRightLeft, minRole: 'staff' },
-    { id: 'qr-scanner', label: 'QRスキャン', icon: Scan, minRole: 'staff' },
     { id: 'qr-generator', label: 'QR生成', icon: QrCode, minRole: 'staff' },
     { id: 'stocktaking', label: '棚卸し', icon: ClipboardCheck, minRole: 'staff' },
     { id: 'user-management', label: 'ユーザー管理', icon: Users, minRole: 'admin' },
