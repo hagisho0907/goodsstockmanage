@@ -10,7 +10,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
-import { alerts } from '../lib/mockData';
+import { dataStore } from '../lib/dataStore';
+import { sortAlertsBySeverity } from '../lib/alertUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -20,9 +21,12 @@ interface HeaderProps {
   onNavigate?: (page: string, productId?: string) => void;
 }
 
-export function Header({ onMenuClick, notificationCount = alerts.length, onNavigate }: HeaderProps) {
+export function Header({ onMenuClick, notificationCount, onNavigate }: HeaderProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
+  
+  const alerts = sortAlertsBySeverity(dataStore.getAlerts());
+  const actualNotificationCount = notificationCount ?? alerts.length;
 
   const handleLogout = () => {
     logout();
@@ -64,12 +68,12 @@ export function Header({ onMenuClick, notificationCount = alerts.length, onNavig
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative text-muted-foreground min-w-[44px] min-h-[44px] p-2">
                 <Bell className="h-5 w-5" />
-                {notificationCount > 0 && (
+                {actualNotificationCount > 0 && (
                   <Badge
                     variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
                   >
-                    {notificationCount > 9 ? '9+' : notificationCount}
+                    {actualNotificationCount > 9 ? '9+' : actualNotificationCount}
                   </Badge>
                 )}
               </Button>

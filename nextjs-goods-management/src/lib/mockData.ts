@@ -99,7 +99,7 @@ export const products: Product[] = [
       productionQuantity: 1000,
       salesRegions: ['日本'],
       salesStartDate: '2024-02-01',
-      salesEndDate: '2025-11-05',
+      salesEndDate: '2025-10-05',
       licensorId: '2',
       licensorName: '株式会社キャラクター企画',
       licenseeId: '2',
@@ -268,24 +268,8 @@ export const stockMovements: StockMovement[] = [
   },
 ];
 
-export const alerts: Alert[] = [
-  {
-    id: '1',
-    type: 'expiring',
-    severity: 'warning',
-    message: 'キャラクターE アクリルキーホルダーの販売期限が近づいています（17日後）',
-    productId: '5',
-    createdAt: '2025-10-08T00:00:00Z',
-  },
-  {
-    id: '2',
-    type: 'expired',
-    severity: 'error',
-    message: 'キャラクターC Tシャツの販売期限が切れています',
-    productId: '3',
-    createdAt: '2025-10-08T00:00:00Z',
-  },
-];
+// 静的アラートは削除し、動的生成のみを使用
+export const alerts: Alert[] = [];
 
 export const productNotes: ProductNote[] = [
   {

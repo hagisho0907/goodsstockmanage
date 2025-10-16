@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { dataStore } from '../lib/dataStore';
+import { sortAlertsBySeverity } from '../lib/alertUtils';
 
 interface DashboardProps {
   onNavigate: (page: string) => void;
@@ -12,7 +13,7 @@ interface DashboardProps {
 export function Dashboard({ onNavigate }: DashboardProps) {
   const products = dataStore.getProducts();
   const stockMovements = dataStore.getStockMovements();
-  const alerts = dataStore.getAlerts();
+  const alerts = sortAlertsBySeverity(dataStore.getAlerts());
   
   const totalProductTypes = products.length;
 
@@ -39,22 +40,28 @@ export function Dashboard({ onNavigate }: DashboardProps) {
       {/* Alerts */}
       <div className="space-y-3">
         <h2>アラート</h2>
-        {alerts.map((alert) => (
-          <Alert
-            key={alert.id}
-            variant={alert.severity === 'error' ? 'destructive' : 'default'}
-            className={alert.severity === 'warning' ? 'border-[#F59E0B] bg-[#FEF3C7]' : ''}
-          >
-            {alert.severity === 'error' ? (
-              <XCircle className="h-4 w-4" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 text-[#F59E0B]" />
-            )}
-            <AlertDescription className={alert.severity === 'warning' ? 'text-[#92400E]' : ''}>
-              {alert.message}
-            </AlertDescription>
-          </Alert>
-        ))}
+        {alerts.length > 0 ? (
+          alerts.map((alert) => (
+            <Alert
+              key={alert.id}
+              variant={alert.severity === 'error' ? 'destructive' : 'default'}
+              className={alert.severity === 'warning' ? 'border-[#F59E0B] bg-[#FEF3C7]' : ''}
+            >
+              {alert.severity === 'error' ? (
+                <XCircle className="h-4 w-4" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-[#F59E0B]" />
+              )}
+              <AlertDescription className={alert.severity === 'warning' ? 'text-[#92400E]' : ''}>
+                {alert.message}
+              </AlertDescription>
+            </Alert>
+          ))
+        ) : (
+          <div className="p-4 text-center border rounded-lg bg-gray-50">
+            <p className="text-muted-foreground text-sm">現在アラートはありません</p>
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}

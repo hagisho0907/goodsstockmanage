@@ -20,6 +20,7 @@ import {
 } from './ui/table';
 import { Checkbox } from './ui/checkbox';
 import { dataStore, categories, storageLocations } from '../lib/dataStore';
+import { getExpiryStatus as getExpiryStatusFromUtil } from '../lib/dateUtils';
 
 interface ProductListProps {
   onNavigate: (page: string, productId?: string) => void;
@@ -37,13 +38,10 @@ export function ProductList({ onNavigate }: ProductListProps) {
   };
 
   const getExpiryStatus = (salesEndDate?: string) => {
-    if (!salesEndDate) return 'ok';
-    const endDate = new Date(salesEndDate);
-    const today = new Date();
-    const daysUntilExpiry = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysUntilExpiry < 0) return 'expired';
-    if (daysUntilExpiry <= 30) return 'warning';
+    const status = getExpiryStatusFromUtil(salesEndDate);
+    if (status === 'expired') return 'expired';
+    if (status === 'warning') return 'warning';
+    if (status === 'none') return 'none';
     return 'ok';
   };
 
@@ -209,6 +207,11 @@ export function ProductList({ onNavigate }: ProductListProps) {
                       <Badge variant="secondary" className="gap-1 bg-[#10B981] text-white hover:bg-[#059669]">
                         <CheckCircle2 className="h-3 w-3" />
                         OK
+                      </Badge>
+                    )}
+                    {expiryStatus === 'none' && (
+                      <Badge variant="outline" className="gap-1">
+                        -
                       </Badge>
                     )}
                   </TableCell>
