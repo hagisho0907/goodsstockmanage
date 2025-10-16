@@ -3,13 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
-import { products, stockMovements, alerts } from '../lib/mockData';
+import { dataStore } from '../lib/dataStore';
 
 interface DashboardProps {
   onNavigate: (page: string) => void;
 }
 
 export function Dashboard({ onNavigate }: DashboardProps) {
+  const products = dataStore.getProducts();
+  const stockMovements = dataStore.getStockMovements();
+  const alerts = dataStore.getAlerts();
+  
   const totalProductTypes = products.length;
 
   const recentMovements = stockMovements.slice(0, 5);
@@ -109,7 +113,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 <div className="flex items-center gap-4 ml-4">
                   <Badge
                     variant={movement.movementType === 'in' ? 'default' : 'secondary'}
-                    className={movement.movementType === 'in' ? 'bg-[#10B981]' : 'bg-[#2563EB]'}
+                    className={movement.movementType === 'in' ? 'bg-[#10B981] text-white' : 'bg-[#2563EB] text-white'}
                   >
                     {movement.movementType === 'in' ? '入庫' : '出庫'}
                   </Badge>

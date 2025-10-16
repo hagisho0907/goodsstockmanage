@@ -2,16 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import jsQR from 'jsqr';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Alert, AlertDescription } from './ui/alert';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from './ui/select';
 import { toast } from 'sonner';
 import { 
   Camera, 
@@ -86,21 +79,24 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       setCameraDevices(videoInputs);
       setHasCamera(true);
 
-      // デフォルトカメラの選択
-      if (!selectedCameraId && videoInputs.length > 0) {
-        // バックカメラを優先
+      // デフォルトカメラの選択（常に背面カメラを優先）
+      if (videoInputs.length > 0) {
+        // バックカメラを優先して選択
         const backCamera = videoInputs.find(device => 
           device.label.toLowerCase().includes('back') || 
           device.label.toLowerCase().includes('rear') ||
-          device.label.toLowerCase().includes('environment')
+          device.label.toLowerCase().includes('environment') ||
+          device.label.toLowerCase().includes('主カメラ') ||
+          device.label.toLowerCase().includes('外側')
         );
         
         if (backCamera) {
           console.log('[QRScanner] Back camera found:', backCamera);
           setSelectedCameraId(backCamera.deviceId);
         } else {
-          console.log('[QRScanner] Using first camera:', videoInputs[0]);
-          setSelectedCameraId(videoInputs[0].deviceId);
+          // 背面カメラが見つからない場合は最後のカメラを使用（多くの場合、背面カメラ）
+          console.log('[QRScanner] Using last camera (likely back camera):', videoInputs[videoInputs.length - 1]);
+          setSelectedCameraId(videoInputs[videoInputs.length - 1].deviceId);
         }
       }
     } catch (error) {
@@ -469,19 +465,19 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       case 'stock-in':
         return {
           title: '入庫スキャン',
-          description: '入庫する物品のQRコードをスキャンしてください',
+          description: '',
           icon: <ArrowRightLeft className="w-8 h-8" />
         };
       case 'stock-out':
         return {
-          title: '出庫スキャン',
-          description: '出庫する物品のQRコードをスキャンしてください',
+          title: '出庫スキャン', 
+          description: '',
           icon: <ArrowRightLeft className="w-8 h-8 rotate-180" />
         };
       default:
         return {
-          title: 'QRコードスキャン',
-          description: '物品のQRコードをスキャンして情報を確認します',
+          title: 'QRスキャン',
+          description: '',
           icon: <QrCode className="w-8 h-8" />
         };
     }
@@ -508,23 +504,16 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
   }
 
   return (
-    <div className="space-y-6 w-full max-w-full overflow-hidden">
+    <div className="space-y-4 w-full max-w-full overflow-hidden">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
+        <h1 className="text-xl font-bold flex items-center gap-2">
           {modeInfo.icon}
           {modeInfo.title}
         </h1>
-        <p className="text-muted-foreground mt-1">{modeInfo.description}</p>
       </div>
 
       <Card className="w-full max-w-full overflow-hidden">
-        <CardHeader>
-          <CardTitle>カメラスキャン</CardTitle>
-          <CardDescription>
-            QRコードをカメラでスキャンします
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 w-full max-w-full overflow-hidden">
+        <CardContent className="space-y-4 w-full max-w-full overflow-hidden pt-6">
           {/* 権限エラー表示 */}
           {permissionStatus === 'denied' && (
             <Alert variant="destructive">
@@ -537,28 +526,9 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
           )}
 
           {/* カメラコントロール */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            {cameraDevices.length > 1 && (
-              <Select value={selectedCameraId} onValueChange={setSelectedCameraId}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue placeholder="カメラを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cameraDevices.map((device, index) => (
-                    <SelectItem key={device.deviceId} value={device.deviceId}>
-                      {device.label || `カメラ ${index + 1}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
+          <div className="flex justify-center">
             <Button
               onClick={() => {
-                console.log('[QRScanner] Button clicked');
-                console.log('[QRScanner] Current state - isScanning:', isScanning);
-                console.log('[QRScanner] Current state - hasCamera:', hasCamera);
-                console.log('[QRScanner] Current state - permissionStatus:', permissionStatus);
                 if (isScanning) {
                   stopCamera();
                 } else {
@@ -567,12 +537,13 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
               }}
               variant={isScanning ? 'destructive' : 'default'}
               disabled={isRequestingCamera || !hasCamera}
-              className="min-w-[140px]"
+              className="min-w-[120px] px-6 py-3"
+              size="lg"
             >
               {isRequestingCamera ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  準備中...
+                  準備中
                 </>
               ) : isScanning ? (
                 <>
@@ -611,8 +582,8 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                       </div>
                     </div>
                     <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-                      <p className="text-white bg-black bg-opacity-50 px-4 py-2 rounded">
-                        QRコードを枠内に合わせてください
+                      <p className="text-white bg-black bg-opacity-50 px-3 py-2 rounded text-sm">
+                        QRコードを枠内に
                       </p>
                     </div>
                   </>
@@ -620,13 +591,13 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
                   <div className="flex flex-col items-center justify-center h-full text-white">
                     {hasCamera ? (
                       <>
-                        <Camera className="w-16 h-16 mb-4 opacity-50" />
-                        <p>「開始」ボタンをクリックしてスキャンを開始</p>
+                        <Camera className="w-12 h-12 mb-3 opacity-50" />
+                        <p className="text-sm">開始ボタンでスキャン</p>
                       </>
                     ) : (
                       <>
-                        <AlertCircle className="w-16 h-16 mb-4 opacity-50" />
-                        <p>カメラが利用できません</p>
+                        <AlertCircle className="w-12 h-12 mb-3 opacity-50" />
+                        <p className="text-sm">カメラ利用不可</p>
                       </>
                     )}
                   </div>

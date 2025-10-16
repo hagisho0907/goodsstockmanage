@@ -1,5 +1,6 @@
-import { Product, StockMovement, ProductNote, User, Stocktaking, StocktakingItem } from '../types';
+import { Product, StockMovement, ProductNote, User, Stocktaking, StocktakingItem, Alert } from '../types';
 import * as mockData from './mockData';
+import { generateAlerts } from './alertUtils';
 
 // メモリ内データストア（リロード時にリセットされる）
 class DataStore {
@@ -12,6 +13,11 @@ class DataStore {
   // Products
   getProducts(): Product[] {
     return [...this.products];
+  }
+  
+  // Alerts（動的生成）
+  getAlerts(): Alert[] {
+    return generateAlerts(this.products);
   }
 
   addProduct(product: Product): void {
@@ -121,6 +127,7 @@ export const stockMovements = dataStore.getStockMovements();
 export const productNotes = dataStore.getProductNotes();
 export const users = dataStore.getUsers();
 export const stocktakings = dataStore.getStocktakings();
+export const alerts = dataStore.getAlerts(); // 動的生成されたアラート
 
 // 他のマスターデータは静的なまま
 export {
@@ -129,7 +136,6 @@ export {
   licensors,
   licensees,
   manufacturers,
-  alerts,
   userRoles,
   reports
 } from './mockData';
