@@ -505,14 +505,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
 
   return (
     <div className="space-y-4 w-full max-w-full overflow-hidden">
-      <div>
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          {modeInfo.icon}
-          {modeInfo.title}
-        </h1>
-      </div>
-
-      <Card className="w-full max-w-full overflow-hidden">
+      <Card className="w-full max-w-full overflow-hidden border-gray-200 bg-gray-50">
         <CardContent className="space-y-4 w-full max-w-full overflow-hidden pt-6">
           {/* 権限エラー表示 */}
           {permissionStatus === 'denied' && (
