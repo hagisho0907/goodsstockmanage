@@ -217,8 +217,15 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       const scanData = JSON.parse(data) as ScanResult;
       console.log('[QRScanner] Parsed QR data:', scanData);
       
-      if (!scanData.id || scanData.type !== 'product') {
-        console.log('[QRScanner] Invalid QR code - missing id or wrong type');
+      if (!scanData.id) {
+        console.log('[QRScanner] Invalid QR code - missing id');
+        toast.error('商品IDが含まれていません');
+        return;
+      }
+      
+      // typeフィールドは必須ではない（後方互換性のため）
+      if (scanData.type && scanData.type !== 'product') {
+        console.log('[QRScanner] Invalid QR code - wrong type:', scanData.type);
         toast.error('商品用QRコードではありません');
         return;
       }
@@ -226,10 +233,13 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
       // 商品を検索
       const products = dataStore.getProducts();
       console.log('[QRScanner] Available products:', products.length);
+      console.log('[QRScanner] Looking for product with id:', scanData.id);
+      console.log('[QRScanner] Product IDs available:', products.map(p => p.id));
       const product = products.find(p => p.id === scanData.id);
       console.log('[QRScanner] Found product:', product);
       
       if (product) {
+        console.log('[QRScanner] Product found! Setting scan result and found product');
         setScanResult(scanData);
         setFoundProduct(product);
         
@@ -240,19 +250,23 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
           product
         }, ...prev.slice(0, 9)]);
 
+        console.log('[QRScanner] Showing success toast');
         toast.success(`商品を検出: ${product.name}`);
 
         // モードに応じた処理
         if (mode === 'stock-in' || mode === 'stock-out') {
+          console.log('[QRScanner] Stock mode detected, calling onProductDetected');
           if (onProductDetected) {
             onProductDetected(product.id);
           }
         }
 
         if (!continuousMode) {
+          console.log('[QRScanner] Not continuous mode, stopping camera');
           stopCamera();
         }
       } else {
+        console.log('[QRScanner] Product not found in database');
         toast.error('商品が見つかりません');
       }
     } catch (error) {
