@@ -149,7 +149,7 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
               console.log('[QRScanner] Permission changed to:', result.state);
               setPermissionStatus(result.state);
             };
-          } catch (e) {
+          } catch {
             // permissions APIがサポートされていない場合
             console.log('[QRScanner] Permissions API not supported');
             setPermissionStatus('prompt');
@@ -351,8 +351,13 @@ export function QRCodeScanner({ onNavigate, mode = 'search', onProductDetected }
     } catch (error) {
       console.error('[QRScanner] Camera start error:', error);
       console.error('[QRScanner] Error type:', typeof error);
-      console.error('[QRScanner] Error name:', (error as any)?.name);
-      console.error('[QRScanner] Error message:', (error as any)?.message);
+      if (error instanceof Error) {
+        console.error('[QRScanner] Error name:', error.name);
+        console.error('[QRScanner] Error message:', error.message);
+      } else {
+        console.error('[QRScanner] Error name:', 'Unknown');
+        console.error('[QRScanner] Error message:', String(error));
+      }
       
       let errorMessage = 'カメラの起動に失敗しました';
       
